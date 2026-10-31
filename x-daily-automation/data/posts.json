@@ -40,19 +40,37 @@
       "created_at": "2026-10-27T13:16:20.000Z",
       "discovered_at": "2026-10-27T21:01:39Z",
       "kind": "quote",
-      "metrics_updated_at": "2026-10-30T21:10:26Z",
+      "metrics_updated_at": "2026-10-31T20:20:34Z",
       "post_id": "2115070089326178668",
       "post_url": "https://x.com/0x_nation/status/2115070089326178668",
       "public_metrics": {
-        "bookmark_count": 1,
-        "impression_count": 4418,
-        "like_count": 132,
+        "bookmark_count": 2,
+        "impression_count": 4454,
+        "like_count": 133,
         "quote_count": 0,
-        "reply_count": 61,
+        "reply_count": 62,
         "retweet_count": 3
       },
       "status": "PLANNED",
       "text": "gm🌻\n\nthe annoying part of using coding agents is everything around the code. checking their work, dealing with CI failures, and constantly giving them context.\n\nthat’s why @superplanehq caught my attention. it handles that coordination so your team can focus on building and https://t.co/FZyF94Iu9C"
+    },
+    "2116409587977081187": {
+      "created_at": "2026-10-31T05:59:01.000Z",
+      "discovered_at": "2026-10-31T20:20:34Z",
+      "kind": "original",
+      "metrics_updated_at": "2026-10-31T20:20:34Z",
+      "post_id": "2116409587977081187",
+      "post_url": "https://x.com/0x_nation/status/2116409587977081187",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 4236,
+        "like_count": 38,
+        "quote_count": 0,
+        "reply_count": 39,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "gm ☕️\n\nCrypto timeline today: \"$6.3B reportedly stolen from Binance.\"\n\nMeanwhile, every business owner: \"Can we PLEASE just get an invoice paid without another plot twist?\" 😭\n\nhttps://t.co/rvYe3czi8J keeps it practical:\n\nUSDT in → SWIFT bank transfer out.\n\n✅ 0.3% fixed fee\n✅ https://t.co/KNT2zxUh7g"
     }
   },
   "schema_version": 1
