@@ -26,7 +26,7 @@
         {
           "authorized_at": "2026-10-26T19:26:10Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-10-31T20:20:34Z",
+          "last_checked_at": "2026-11-01T20:53:13Z",
           "last_error": null,
           "last_status": {
             "charge": 0.0018,
@@ -44,7 +44,7 @@
         {
           "authorized_at": "2026-10-26T19:26:10Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-10-31T20:20:34Z",
+          "last_checked_at": "2026-11-01T20:53:13Z",
           "last_error": null,
           "last_status": {
             "charge": 0.0,
@@ -77,14 +77,14 @@
         "impressions": 1500,
         "likes": 50
       },
-      "updated_at": "2026-10-31T20:20:34Z"
+      "updated_at": "2026-11-01T20:53:13Z"
     },
     "2115070089326178668": {
       "authorized_campaigns": [
         {
           "authorized_at": "2026-10-27T21:01:39Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-10-31T20:20:34Z",
+          "last_checked_at": "2026-11-01T20:53:13Z",
           "last_error": null,
           "last_status": {
             "charge": 0.0018,
@@ -102,7 +102,7 @@
         {
           "authorized_at": "2026-10-27T21:01:39Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-10-31T20:20:34Z",
+          "last_checked_at": "2026-11-01T20:53:13Z",
           "last_error": null,
           "last_status": {
             "charge": 0.052835,
@@ -122,10 +122,10 @@
       "created_at": "2026-10-27T21:01:39Z",
       "errors": [],
       "performance": {
-        "impressions": 4454,
+        "impressions": 4468,
         "likes": 133,
         "source": "x_api_public_metrics",
-        "updated_at": "2026-10-31T20:20:34Z"
+        "updated_at": "2026-11-01T20:53:13Z"
       },
       "post_id": "2115070089326178668",
       "post_url": "https://x.com/0x_nation/status/2115070089326178668",
@@ -135,21 +135,21 @@
         "impressions": 1500,
         "likes": 50
       },
-      "updated_at": "2026-10-31T20:20:34Z"
+      "updated_at": "2026-11-01T20:53:13Z"
     },
     "2116409587977081187": {
       "authorized_campaigns": [
         {
           "authorized_at": "2026-10-31T20:20:34Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-10-31T20:20:34Z",
+          "last_checked_at": "2026-11-01T20:53:13Z",
           "last_error": null,
           "last_status": {
             "charge": 0.0012,
             "currency": "USD",
-            "remains": 1500,
-            "start_count": null,
-            "status": "Pending"
+            "remains": 0,
+            "start_count": 4236,
+            "status": "Completed"
           },
           "provider": "smmsoc",
           "quantity": 1500,
@@ -160,14 +160,14 @@
         {
           "authorized_at": "2026-10-31T20:20:34Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-10-31T20:20:34Z",
+          "last_checked_at": "2026-11-01T20:53:13Z",
           "last_error": null,
           "last_status": {
-            "charge": 0.052835,
+            "charge": 0.0,
             "currency": "USD",
             "remains": 50,
             "start_count": null,
-            "status": "Pending"
+            "status": "Canceled"
           },
           "provider": "smmsoc",
           "quantity": 50,
@@ -180,20 +180,20 @@
       "created_at": "2026-10-31T20:20:34Z",
       "errors": [],
       "performance": {
-        "impressions": 4236,
-        "likes": 38,
+        "impressions": 5072,
+        "likes": 52,
         "source": "x_api_public_metrics",
-        "updated_at": "2026-10-31T20:20:34Z"
+        "updated_at": "2026-11-01T20:53:13Z"
       },
       "post_id": "2116409587977081187",
       "post_url": "https://x.com/0x_nation/status/2116409587977081187",
-      "promotion_status": "CAMPAIGN_LINKED",
+      "promotion_status": "TARGETS_REACHED",
       "status": "PLANNED",
       "targets": {
         "impressions": 1500,
         "likes": 50
       },
-      "updated_at": "2026-10-31T20:20:34Z"
+      "updated_at": "2026-11-01T20:53:13Z"
     }
   },
   "schema_version": 1
