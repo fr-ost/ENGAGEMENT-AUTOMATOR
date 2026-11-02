@@ -26,8 +26,8 @@
         {
           "authorized_at": "2026-10-26T19:26:10Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-01T20:53:13Z",
-          "last_error": null,
+          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.0018,
             "currency": "USD",
@@ -44,8 +44,8 @@
         {
           "authorized_at": "2026-10-26T19:26:10Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-01T20:53:13Z",
-          "last_error": null,
+          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.0,
             "currency": "USD",
@@ -84,8 +84,8 @@
         {
           "authorized_at": "2026-10-27T21:01:39Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-01T20:53:13Z",
-          "last_error": null,
+          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.0018,
             "currency": "USD",
@@ -102,8 +102,8 @@
         {
           "authorized_at": "2026-10-27T21:01:39Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-01T20:53:13Z",
-          "last_error": null,
+          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.052835,
             "currency": "USD",
@@ -122,10 +122,10 @@
       "created_at": "2026-10-27T21:01:39Z",
       "errors": [],
       "performance": {
-        "impressions": 4468,
+        "impressions": 4495,
         "likes": 133,
         "source": "x_api_public_metrics",
-        "updated_at": "2026-11-01T20:53:13Z"
+        "updated_at": "2026-11-02T23:43:05Z"
       },
       "post_id": "2115070089326178668",
       "post_url": "https://x.com/0x_nation/status/2115070089326178668",
@@ -135,15 +135,15 @@
         "impressions": 1500,
         "likes": 50
       },
-      "updated_at": "2026-11-01T20:53:13Z"
+      "updated_at": "2026-11-02T23:43:05Z"
     },
     "2116409587977081187": {
       "authorized_campaigns": [
         {
           "authorized_at": "2026-10-31T20:20:34Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-01T20:53:13Z",
-          "last_error": null,
+          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.0012,
             "currency": "USD",
@@ -160,8 +160,8 @@
         {
           "authorized_at": "2026-10-31T20:20:34Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-01T20:53:13Z",
-          "last_error": null,
+          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.0,
             "currency": "USD",
@@ -180,10 +180,10 @@
       "created_at": "2026-10-31T20:20:34Z",
       "errors": [],
       "performance": {
-        "impressions": 5072,
-        "likes": 52,
+        "impressions": 5144,
+        "likes": 55,
         "source": "x_api_public_metrics",
-        "updated_at": "2026-11-01T20:53:13Z"
+        "updated_at": "2026-11-02T23:43:05Z"
       },
       "post_id": "2116409587977081187",
       "post_url": "https://x.com/0x_nation/status/2116409587977081187",
@@ -193,7 +193,55 @@
         "impressions": 1500,
         "likes": 50
       },
-      "updated_at": "2026-11-01T20:53:13Z"
+      "updated_at": "2026-11-02T23:43:05Z"
+    },
+    "2117263340749918380": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-02T23:43:05Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2117263340749918380): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2117263340749918380): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 1544,
+        "likes": 20,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-02T23:43:05Z"
+      },
+      "post_id": "2117263340749918380",
+      "post_url": "https://x.com/0x_nation/status/2117263340749918380",
+      "promotion_status": "NOT_STARTED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-02T23:43:05Z"
+    },
+    "2117296564360355878": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-02T23:43:05Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2117296564360355878): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2117296564360355878): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 2299,
+        "likes": 15,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-02T23:43:05Z"
+      },
+      "post_id": "2117296564360355878",
+      "post_url": "https://x.com/0x_nation/status/2117296564360355878",
+      "promotion_status": "NOT_STARTED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-02T23:43:05Z"
     }
   },
   "schema_version": 1

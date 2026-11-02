@@ -40,12 +40,12 @@
       "created_at": "2026-10-27T13:16:20.000Z",
       "discovered_at": "2026-10-27T21:01:39Z",
       "kind": "quote",
-      "metrics_updated_at": "2026-11-01T20:53:13Z",
+      "metrics_updated_at": "2026-11-02T23:43:05Z",
       "post_id": "2115070089326178668",
       "post_url": "https://x.com/0x_nation/status/2115070089326178668",
       "public_metrics": {
         "bookmark_count": 2,
-        "impression_count": 4468,
+        "impression_count": 4495,
         "like_count": 133,
         "quote_count": 0,
         "reply_count": 62,
@@ -58,19 +58,55 @@
       "created_at": "2026-10-31T05:59:01.000Z",
       "discovered_at": "2026-10-31T20:20:34Z",
       "kind": "original",
-      "metrics_updated_at": "2026-11-01T20:53:13Z",
+      "metrics_updated_at": "2026-11-02T23:43:05Z",
       "post_id": "2116409587977081187",
       "post_url": "https://x.com/0x_nation/status/2116409587977081187",
       "public_metrics": {
         "bookmark_count": 0,
-        "impression_count": 5072,
-        "like_count": 52,
+        "impression_count": 5144,
+        "like_count": 55,
         "quote_count": 0,
-        "reply_count": 52,
+        "reply_count": 54,
         "retweet_count": 0
       },
       "status": "PLANNED",
       "text": "gm ☕️\n\nCrypto timeline today: \"$6.3B reportedly stolen from Binance.\"\n\nMeanwhile, every business owner: \"Can we PLEASE just get an invoice paid without another plot twist?\" 😭\n\nhttps://t.co/rvYe3czi8J keeps it practical:\n\nUSDT in → SWIFT bank transfer out.\n\n✅ 0.3% fixed fee\n✅ https://t.co/KNT2zxUh7g"
+    },
+    "2117263340749918380": {
+      "created_at": "2026-11-02T14:31:31.000Z",
+      "discovered_at": "2026-11-02T23:43:05Z",
+      "kind": "quote",
+      "metrics_updated_at": "2026-11-02T23:43:05Z",
+      "post_id": "2117263340749918380",
+      "post_url": "https://x.com/0x_nation/status/2117263340749918380",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 1544,
+        "like_count": 20,
+        "quote_count": 0,
+        "reply_count": 24,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "gm\n\nWhat I find interesting about WLFI staking isn't just the 90% APY.\n\nIt's that rewards come in USD1, not more $WLFI.\n\nPersonally, I'd rather earn stables than keep adding exposure to the same token. Makes even more sense in a volatile market.\n\nSometimes what you earn matters https://t.co/e6lNZMdFAt"
+    },
+    "2117296564360355878": {
+      "created_at": "2026-11-02T16:43:33.000Z",
+      "discovered_at": "2026-11-02T23:43:05Z",
+      "kind": "original",
+      "metrics_updated_at": "2026-11-02T23:43:05Z",
+      "post_id": "2117296564360355878",
+      "post_url": "https://x.com/0x_nation/status/2117296564360355878",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 2299,
+        "like_count": 15,
+        "quote_count": 0,
+        "reply_count": 14,
+        "retweet_count": 1
+      },
+      "status": "PLANNED",
+      "text": "gm\n\n290K+ active active users in the past 30 days.\n\nThat's what makes @nGRND_io interesting to me. It's not just about getting people to sign up, but getting them to actually come back and use the protocol.\n\nDavid Lucatch shares more about the idea behind nGRND and its early https://t.co/nz5z2OZoVQ"
     }
   },
   "schema_version": 1
