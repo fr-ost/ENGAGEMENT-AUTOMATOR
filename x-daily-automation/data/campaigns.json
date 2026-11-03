@@ -26,7 +26,7 @@
         {
           "authorized_at": "2026-10-26T19:26:10Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_checked_at": "2026-11-03T22:05:43Z",
           "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.0018,
@@ -44,7 +44,7 @@
         {
           "authorized_at": "2026-10-26T19:26:10Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_checked_at": "2026-11-03T22:05:43Z",
           "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.0,
@@ -84,7 +84,7 @@
         {
           "authorized_at": "2026-10-27T21:01:39Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_checked_at": "2026-11-03T22:05:43Z",
           "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.0018,
@@ -102,7 +102,7 @@
         {
           "authorized_at": "2026-10-27T21:01:39Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_checked_at": "2026-11-03T22:05:43Z",
           "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.052835,
@@ -142,7 +142,7 @@
         {
           "authorized_at": "2026-10-31T20:20:34Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_checked_at": "2026-11-03T22:05:43Z",
           "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.0012,
@@ -160,7 +160,7 @@
         {
           "authorized_at": "2026-10-31T20:20:34Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-02T23:43:05Z",
+          "last_checked_at": "2026-11-03T22:05:43Z",
           "last_error": "SMM API authentication failed: Invalid API key",
           "last_status": {
             "charge": 0.0,
@@ -180,10 +180,10 @@
       "created_at": "2026-10-31T20:20:34Z",
       "errors": [],
       "performance": {
-        "impressions": 5144,
-        "likes": 55,
+        "impressions": 5187,
+        "likes": 118,
         "source": "x_api_public_metrics",
-        "updated_at": "2026-11-02T23:43:05Z"
+        "updated_at": "2026-11-03T22:05:43Z"
       },
       "post_id": "2116409587977081187",
       "post_url": "https://x.com/0x_nation/status/2116409587977081187",
@@ -193,7 +193,7 @@
         "impressions": 1500,
         "likes": 50
       },
-      "updated_at": "2026-11-02T23:43:05Z"
+      "updated_at": "2026-11-03T22:05:43Z"
     },
     "2117263340749918380": {
       "authorized_campaigns": [],
@@ -204,20 +204,20 @@
         "Auto-order failed (likes for post 2117263340749918380): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
       ],
       "performance": {
-        "impressions": 1544,
-        "likes": 20,
+        "impressions": 2509,
+        "likes": 153,
         "source": "x_api_public_metrics",
-        "updated_at": "2026-11-02T23:43:05Z"
+        "updated_at": "2026-11-03T22:05:43Z"
       },
       "post_id": "2117263340749918380",
       "post_url": "https://x.com/0x_nation/status/2117263340749918380",
-      "promotion_status": "NOT_STARTED",
+      "promotion_status": "TARGETS_REACHED",
       "status": "PLANNED",
       "targets": {
         "impressions": 1500,
         "likes": 50
       },
-      "updated_at": "2026-11-02T23:43:05Z"
+      "updated_at": "2026-11-03T22:05:43Z"
     },
     "2117296564360355878": {
       "authorized_campaigns": [],
@@ -228,20 +228,20 @@
         "Auto-order failed (likes for post 2117296564360355878): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
       ],
       "performance": {
-        "impressions": 2299,
-        "likes": 15,
+        "impressions": 4033,
+        "likes": 154,
         "source": "x_api_public_metrics",
-        "updated_at": "2026-11-02T23:43:05Z"
+        "updated_at": "2026-11-03T22:05:43Z"
       },
       "post_id": "2117296564360355878",
       "post_url": "https://x.com/0x_nation/status/2117296564360355878",
-      "promotion_status": "NOT_STARTED",
+      "promotion_status": "TARGETS_REACHED",
       "status": "PLANNED",
       "targets": {
         "impressions": 1500,
         "likes": 50
       },
-      "updated_at": "2026-11-02T23:43:05Z"
+      "updated_at": "2026-11-03T22:05:43Z"
     }
   },
   "schema_version": 1
