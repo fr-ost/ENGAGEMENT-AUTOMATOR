@@ -58,13 +58,13 @@
       "created_at": "2026-10-31T05:59:01.000Z",
       "discovered_at": "2026-10-31T20:20:34Z",
       "kind": "original",
-      "metrics_updated_at": "2026-11-03T22:05:43Z",
+      "metrics_updated_at": "2026-11-04T22:16:37Z",
       "post_id": "2116409587977081187",
       "post_url": "https://x.com/0x_nation/status/2116409587977081187",
       "public_metrics": {
         "bookmark_count": 0,
-        "impression_count": 5187,
-        "like_count": 118,
+        "impression_count": 5202,
+        "like_count": 119,
         "quote_count": 0,
         "reply_count": 55,
         "retweet_count": 0
@@ -76,15 +76,15 @@
       "created_at": "2026-11-02T14:31:31.000Z",
       "discovered_at": "2026-11-02T23:43:05Z",
       "kind": "quote",
-      "metrics_updated_at": "2026-11-03T22:05:43Z",
+      "metrics_updated_at": "2026-11-04T22:16:37Z",
       "post_id": "2117263340749918380",
       "post_url": "https://x.com/0x_nation/status/2117263340749918380",
       "public_metrics": {
         "bookmark_count": 1,
-        "impression_count": 2509,
-        "like_count": 153,
+        "impression_count": 2554,
+        "like_count": 156,
         "quote_count": 0,
-        "reply_count": 133,
+        "reply_count": 134,
         "retweet_count": 0
       },
       "status": "PLANNED",
@@ -94,19 +94,37 @@
       "created_at": "2026-11-02T16:43:33.000Z",
       "discovered_at": "2026-11-02T23:43:05Z",
       "kind": "original",
-      "metrics_updated_at": "2026-11-03T22:05:43Z",
+      "metrics_updated_at": "2026-11-04T22:16:37Z",
       "post_id": "2117296564360355878",
       "post_url": "https://x.com/0x_nation/status/2117296564360355878",
       "public_metrics": {
         "bookmark_count": 0,
-        "impression_count": 4033,
-        "like_count": 154,
-        "quote_count": 0,
-        "reply_count": 66,
-        "retweet_count": 27
+        "impression_count": 4314,
+        "like_count": 291,
+        "quote_count": 1,
+        "reply_count": 82,
+        "retweet_count": 52
       },
       "status": "PLANNED",
       "text": "gm\n\n290K+ active active users in the past 30 days.\n\nThat's what makes @nGRND_io interesting to me. It's not just about getting people to sign up, but getting them to actually come back and use the protocol.\n\nDavid Lucatch shares more about the idea behind nGRND and its early https://t.co/nz5z2OZoVQ"
+    },
+    "2118063040134561800": {
+      "created_at": "2026-11-04T19:29:15.000Z",
+      "discovered_at": "2026-11-04T22:16:37Z",
+      "kind": "quote",
+      "metrics_updated_at": "2026-11-04T22:16:37Z",
+      "post_id": "2118063040134561800",
+      "post_url": "https://x.com/0x_nation/status/2118063040134561800",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 683,
+        "like_count": 9,
+        "quote_count": 0,
+        "reply_count": 9,
+        "retweet_count": 1
+      },
+      "status": "PLANNED",
+      "text": "gm\n\nHad an idea about where the market is heading, so I decided to put it to the test on Mosh.\n\nI created a riff based on my own thesis, picked the assets, adjusted the weights, and let the agent take it from there.\n\nPretty cool to see an investment idea turn into an actual https://t.co/FGbtBTaox3"
     }
   },
   "schema_version": 1
