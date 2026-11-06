@@ -6,14 +6,14 @@
   "last_run": {
     "duplicates_skipped": 0,
     "errors": [],
-    "finished_at": "2026-11-05T22:25:22Z",
-    "new_posts": 0,
+    "finished_at": "2026-11-06T21:48:16Z",
+    "new_posts": 2,
     "scan_status": "SUCCESS",
-    "started_at": "2026-11-05T22:25:19Z",
+    "started_at": "2026-11-06T21:48:13Z",
     "x_requests": 2
   },
-  "last_scan_window_start": "2026-11-04T20:16:37Z",
-  "last_successful_scan_at": "2026-11-05T22:25:19Z",
+  "last_scan_window_start": "2026-11-05T20:25:19Z",
+  "last_successful_scan_at": "2026-11-06T21:48:13Z",
   "run_history": [
     {
       "duplicates_skipped": 0,
@@ -130,6 +130,15 @@
       "new_posts": 0,
       "scan_status": "SUCCESS",
       "started_at": "2026-11-05T22:25:19Z",
+      "x_requests": 2
+    },
+    {
+      "duplicates_skipped": 0,
+      "errors": [],
+      "finished_at": "2026-11-06T21:48:16Z",
+      "new_posts": 2,
+      "scan_status": "SUCCESS",
+      "started_at": "2026-11-06T21:48:13Z",
       "x_requests": 2
     }
   ],

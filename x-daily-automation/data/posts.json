@@ -58,13 +58,13 @@
       "created_at": "2026-10-31T05:59:01.000Z",
       "discovered_at": "2026-10-31T20:20:34Z",
       "kind": "original",
-      "metrics_updated_at": "2026-11-05T22:25:19Z",
+      "metrics_updated_at": "2026-11-06T21:48:13Z",
       "post_id": "2116409587977081187",
       "post_url": "https://x.com/0x_nation/status/2116409587977081187",
       "public_metrics": {
         "bookmark_count": 0,
-        "impression_count": 5216,
-        "like_count": 119,
+        "impression_count": 5226,
+        "like_count": 58,
         "quote_count": 0,
         "reply_count": 55,
         "retweet_count": 0
@@ -76,13 +76,13 @@
       "created_at": "2026-11-02T14:31:31.000Z",
       "discovered_at": "2026-11-02T23:43:05Z",
       "kind": "quote",
-      "metrics_updated_at": "2026-11-05T22:25:19Z",
+      "metrics_updated_at": "2026-11-06T21:48:13Z",
       "post_id": "2117263340749918380",
       "post_url": "https://x.com/0x_nation/status/2117263340749918380",
       "public_metrics": {
         "bookmark_count": 1,
-        "impression_count": 2572,
-        "like_count": 156,
+        "impression_count": 2590,
+        "like_count": 135,
         "quote_count": 0,
         "reply_count": 134,
         "retweet_count": 0
@@ -94,16 +94,16 @@
       "created_at": "2026-11-02T16:43:33.000Z",
       "discovered_at": "2026-11-02T23:43:05Z",
       "kind": "original",
-      "metrics_updated_at": "2026-11-05T22:25:19Z",
+      "metrics_updated_at": "2026-11-06T21:48:13Z",
       "post_id": "2117296564360355878",
       "post_url": "https://x.com/0x_nation/status/2117296564360355878",
       "public_metrics": {
         "bookmark_count": 1,
-        "impression_count": 4477,
-        "like_count": 384,
+        "impression_count": 4608,
+        "like_count": 449,
         "quote_count": 1,
-        "reply_count": 96,
-        "retweet_count": 65
+        "reply_count": 101,
+        "retweet_count": 72
       },
       "status": "PLANNED",
       "text": "gm\n\n290K+ active active users in the past 30 days.\n\nThat's what makes @nGRND_io interesting to me. It's not just about getting people to sign up, but getting them to actually come back and use the protocol.\n\nDavid Lucatch shares more about the idea behind nGRND and its early https://t.co/nz5z2OZoVQ"
@@ -112,19 +112,55 @@
       "created_at": "2026-11-04T19:29:15.000Z",
       "discovered_at": "2026-11-04T22:16:37Z",
       "kind": "quote",
-      "metrics_updated_at": "2026-11-05T22:25:19Z",
+      "metrics_updated_at": "2026-11-06T21:48:13Z",
       "post_id": "2118063040134561800",
       "post_url": "https://x.com/0x_nation/status/2118063040134561800",
       "public_metrics": {
         "bookmark_count": 0,
-        "impression_count": 1445,
-        "like_count": 55,
+        "impression_count": 1623,
+        "like_count": 100,
         "quote_count": 0,
-        "reply_count": 56,
+        "reply_count": 90,
         "retweet_count": 1
       },
       "status": "PLANNED",
       "text": "gm\n\nHad an idea about where the market is heading, so I decided to put it to the test on Mosh.\n\nI created a riff based on my own thesis, picked the assets, adjusted the weights, and let the agent take it from there.\n\nPretty cool to see an investment idea turn into an actual https://t.co/FGbtBTaox3"
+    },
+    "2118631765640400972": {
+      "created_at": "2026-11-06T09:09:09.000Z",
+      "discovered_at": "2026-11-06T21:48:13Z",
+      "kind": "original",
+      "metrics_updated_at": "2026-11-06T21:48:13Z",
+      "post_id": "2118631765640400972",
+      "post_url": "https://x.com/0x_nation/status/2118631765640400972",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 5875,
+        "like_count": 124,
+        "quote_count": 0,
+        "reply_count": 116,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "gm everyone 👋\n\nI've been checking out Grvt's High Yield Earn, and a few things caught my attention.\n\nWhat I like is that it doesn't rely on just one source of yield. It combines traditional finance and crypto strategies in one product.\n\nHere's what they're offering:\n- Up to 11% https://t.co/LVpXEHm9vL"
+    },
+    "2118761404702577063": {
+      "created_at": "2026-11-06T17:44:18.000Z",
+      "discovered_at": "2026-11-06T21:48:13Z",
+      "kind": "quote",
+      "metrics_updated_at": "2026-11-06T21:48:13Z",
+      "post_id": "2118761404702577063",
+      "post_url": "https://x.com/0x_nation/status/2118761404702577063",
+      "public_metrics": {
+        "bookmark_count": 1,
+        "impression_count": 401,
+        "like_count": 48,
+        "quote_count": 0,
+        "reply_count": 64,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "gm everyone\n\nTurtle generated $1.04M in Q3 revenue alongside Lunar Strategy.\n\nWhat I find interesting is that this happened while Turtle was still building its infrastructure.\n\nThe revenue came from services and distribution. During the quarter, Hare launched with GSR with 100M https://t.co/DcYTuaxY8y"
     }
   },
   "schema_version": 1
