@@ -76,13 +76,13 @@
       "created_at": "2026-11-02T14:31:31.000Z",
       "discovered_at": "2026-11-02T23:43:05Z",
       "kind": "quote",
-      "metrics_updated_at": "2026-11-06T21:48:13Z",
+      "metrics_updated_at": "2026-11-07T20:34:45Z",
       "post_id": "2117263340749918380",
       "post_url": "https://x.com/0x_nation/status/2117263340749918380",
       "public_metrics": {
         "bookmark_count": 1,
-        "impression_count": 2590,
-        "like_count": 135,
+        "impression_count": 2592,
+        "like_count": 126,
         "quote_count": 0,
         "reply_count": 134,
         "retweet_count": 0
@@ -94,16 +94,16 @@
       "created_at": "2026-11-02T16:43:33.000Z",
       "discovered_at": "2026-11-02T23:43:05Z",
       "kind": "original",
-      "metrics_updated_at": "2026-11-06T21:48:13Z",
+      "metrics_updated_at": "2026-11-07T20:34:45Z",
       "post_id": "2117296564360355878",
       "post_url": "https://x.com/0x_nation/status/2117296564360355878",
       "public_metrics": {
         "bookmark_count": 1,
-        "impression_count": 4608,
-        "like_count": 449,
+        "impression_count": 4676,
+        "like_count": 484,
         "quote_count": 1,
-        "reply_count": 101,
-        "retweet_count": 72
+        "reply_count": 107,
+        "retweet_count": 80
       },
       "status": "PLANNED",
       "text": "gm\n\n290K+ active active users in the past 30 days.\n\nThat's what makes @nGRND_io interesting to me. It's not just about getting people to sign up, but getting them to actually come back and use the protocol.\n\nDavid Lucatch shares more about the idea behind nGRND and its early https://t.co/nz5z2OZoVQ"
@@ -112,13 +112,13 @@
       "created_at": "2026-11-04T19:29:15.000Z",
       "discovered_at": "2026-11-04T22:16:37Z",
       "kind": "quote",
-      "metrics_updated_at": "2026-11-06T21:48:13Z",
+      "metrics_updated_at": "2026-11-07T20:34:45Z",
       "post_id": "2118063040134561800",
       "post_url": "https://x.com/0x_nation/status/2118063040134561800",
       "public_metrics": {
         "bookmark_count": 0,
-        "impression_count": 1623,
-        "like_count": 100,
+        "impression_count": 1633,
+        "like_count": 99,
         "quote_count": 0,
         "reply_count": 90,
         "retweet_count": 1
@@ -130,15 +130,15 @@
       "created_at": "2026-11-06T09:09:09.000Z",
       "discovered_at": "2026-11-06T21:48:13Z",
       "kind": "original",
-      "metrics_updated_at": "2026-11-06T21:48:13Z",
+      "metrics_updated_at": "2026-11-07T20:34:45Z",
       "post_id": "2118631765640400972",
       "post_url": "https://x.com/0x_nation/status/2118631765640400972",
       "public_metrics": {
         "bookmark_count": 0,
-        "impression_count": 5875,
-        "like_count": 124,
-        "quote_count": 0,
-        "reply_count": 116,
+        "impression_count": 6244,
+        "like_count": 127,
+        "quote_count": 1,
+        "reply_count": 117,
         "retweet_count": 0
       },
       "status": "PLANNED",
@@ -148,19 +148,73 @@
       "created_at": "2026-11-06T17:44:18.000Z",
       "discovered_at": "2026-11-06T21:48:13Z",
       "kind": "quote",
-      "metrics_updated_at": "2026-11-06T21:48:13Z",
+      "metrics_updated_at": "2026-11-07T20:34:45Z",
       "post_id": "2118761404702577063",
       "post_url": "https://x.com/0x_nation/status/2118761404702577063",
       "public_metrics": {
         "bookmark_count": 1,
-        "impression_count": 401,
-        "like_count": 48,
-        "quote_count": 0,
-        "reply_count": 64,
+        "impression_count": 4664,
+        "like_count": 113,
+        "quote_count": 1,
+        "reply_count": 83,
         "retweet_count": 0
       },
       "status": "PLANNED",
       "text": "gm everyone\n\nTurtle generated $1.04M in Q3 revenue alongside Lunar Strategy.\n\nWhat I find interesting is that this happened while Turtle was still building its infrastructure.\n\nThe revenue came from services and distribution. During the quarter, Hare launched with GSR with 100M https://t.co/DcYTuaxY8y"
+    },
+    "2118930785453654364": {
+      "created_at": "2026-11-07T04:57:21.000Z",
+      "discovered_at": "2026-11-07T20:34:45Z",
+      "kind": "quote",
+      "metrics_updated_at": "2026-11-07T20:34:45Z",
+      "post_id": "2118930785453654364",
+      "post_url": "https://x.com/0x_nation/status/2118930785453654364",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 3908,
+        "like_count": 127,
+        "quote_count": 0,
+        "reply_count": 91,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "gm everyone 👋\n\nAn 11% target APY sounds interesting, but the first thing I'd want to know is: where does the yield actually come from?\n\nThat's what caught my attention about @grvt_io High Yield Earn.\n\nInstead of relying on a single strategy, it combines four different yield https://t.co/iCfiEiNpSc https://t.co/VMPQRxUgfC"
+    },
+    "2118945190799180167": {
+      "created_at": "2026-11-07T05:54:36.000Z",
+      "discovered_at": "2026-11-07T20:34:45Z",
+      "kind": "quote",
+      "metrics_updated_at": "2026-11-07T20:34:45Z",
+      "post_id": "2118945190799180167",
+      "post_url": "https://x.com/0x_nation/status/2118945190799180167",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 403,
+        "like_count": 150,
+        "quote_count": 0,
+        "reply_count": 114,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "One thing I find interesting about Turtle's Q3 report is that the team wasn't just building infrastructure. They were already generating revenue along the way.\n\nTurtle and Lunar Strategy brought in $1.04M in Q3 revenue, on a cash in basis and net of intercompany.\n\nThat revenue https://t.co/u5WlPWHuYQ https://t.co/Ssl7yytJg7"
+    },
+    "2118955644384608510": {
+      "created_at": "2026-11-07T06:36:08.000Z",
+      "discovered_at": "2026-11-07T20:34:45Z",
+      "kind": "quote",
+      "metrics_updated_at": "2026-11-07T20:34:45Z",
+      "post_id": "2118955644384608510",
+      "post_url": "https://x.com/0x_nation/status/2118955644384608510",
+      "public_metrics": {
+        "bookmark_count": 3,
+        "impression_count": 5536,
+        "like_count": 106,
+        "quote_count": 0,
+        "reply_count": 57,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "I don't think a high APY is automatically a bad sign. But I'd definitely want to know how it's being generated before putting my money in.\n\nThat's what makes Grvt High Yield Earn worth looking into.\n\nIt targets up to 11% APY, with yield coming from four different sources:\n\n• https://t.co/lv5WDYNcDB"
     }
   },
   "schema_version": 1
