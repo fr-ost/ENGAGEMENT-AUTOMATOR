@@ -134,7 +134,7 @@ def render_markdown(summary: RunSummary, config: Config, posts: dict[str, Any], 
     lines += [f"## Promotion planning — posts discovered on {summary.bd_date}: {len(today)}", ""]
     lines.append(
         f"Targets per post: **{config.impression_target:,} impressions** and **{config.like_target:,} likes**"
-        + (" (auto-ordered via SMMSOC)" if config.smm_auto_order else " (planning goals only — no auto-orders)")
+        + (f" (auto-ordered via {config.smm_provider})" if config.smm_auto_order else " (planning goals only — no auto-orders)")
         + "."
     )
     lines.append("")
@@ -165,14 +165,14 @@ def render_markdown(summary: RunSummary, config: Config, posts: dict[str, Any], 
         f"| Replies / reposts / quotes filtered | {summary.skipped_replies} / {summary.skipped_reposts} / {summary.skipped_quotes} |",
         f"| Malformed items ignored | {summary.invalid_items} |",
         f"| Estimated X API cost | {f'${cost:.4f} (from your configured prices)' if cost is not None else 'unknown — set X_COST_PER_REQUEST_USD / X_COST_PER_POST_READ_USD from your X developer console'} |",
-        f"| SMMSOC requests | {summary.smm_requests} |",
-        f"| SMMSOC balance | {summary.smm_balance or 'not retrieved'} |",
+        f"| SMM panel ({config.smm_provider}) requests | {summary.smm_requests} |",
+        f"| SMM panel balance | {summary.smm_balance or 'not retrieved'} |",
         f"| Linked campaigns checked | {summary.campaigns_checked} |",
         f"| Verified campaign spend | {_spend(summary.verified_spend)} |",
         "",
     ]
     if summary.smm_services:
-        lines += ["### SMMSOC service metadata (read-only)", ""]
+        lines += ["### SMM panel service metadata", ""]
         for svc in summary.smm_services:
             lines.append("- " + ", ".join(f"{k}: {v}" for k, v in svc.items()))
         lines.append("")
@@ -219,7 +219,7 @@ def render_telegram(summary: RunSummary, config: Config) -> str:
         for o in summary.orders_placed:
             lines.append(f"  • {o['type']} order #{o['order_id']} — {o['quantity']:,} units")
     if summary.smm_balance:
-        lines.append(f"SMMSOC balance: {summary.smm_balance}")
+        lines.append(f"SMM panel balance ({config.smm_provider}): {summary.smm_balance}")
     lines.append(f"X API requests: {summary.x_requests}; duplicates skipped: {summary.duplicates_skipped}")
     if summary.errors or summary.warnings:
         lines.append("Problems:")

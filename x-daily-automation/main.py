@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from src.campaign_manager import (
-    SMMSOCStatusProvider,
+    SMMStatusProvider,
     apply_metrics,
     auto_place_orders,
     ensure_plans,
@@ -148,7 +148,7 @@ def _run_locked(
     summary.x_requests = x_client.request_count
     summary.x_posts_read = x_client.posts_read
 
-    # 4. SMMSOC checks: optional balance/service reads + auto-order for new posts.
+    # 4. SMM panel checks: optional balance/service reads + auto-order for new posts.
     _smm_checks(config, summary, posts, plans, [p.post_id for p in new_posts], now, smm_client)
 
     # 5. Persist. The checkpoint is written last and only after a complete scan.
@@ -221,20 +221,20 @@ def _smm_checks(
         return
     try:
         smm_client = smm_client or SMMClient(
-            config.smm_api_url,  # type: ignore[arg-type]
+            config.smm_api_url,
             config.smm_api_key,  # type: ignore[arg-type]
             timeout=config.http_timeout_seconds,
             max_retries=config.http_max_retries,
         )
     except ValueError as exc:
-        summary.warnings.append(f"SMMSOC client not created: {exc}")
+        summary.warnings.append(f"SMM panel client not created: {exc}")
         return
 
     try:
         balance = smm_client.get_balance()
         summary.smm_balance = f"{balance.amount:.2f} {balance.currency or ''}".strip()
     except SMMError as exc:
-        summary.warnings.append(f"SMMSOC balance unavailable: {exc}")
+        summary.warnings.append(f"SMM panel balance unavailable: {exc}")
 
     wanted = [s for s in (config.smm_impression_service_id, config.smm_like_service_id) if s]
     if wanted:
@@ -243,11 +243,11 @@ def _smm_checks(
             for service_id in wanted:
                 item = smm_client.get_service(service_id, services)
                 if item is None:
-                    summary.warnings.append(f"SMMSOC service {service_id} is not in the service list")
+                    summary.warnings.append(f"SMM panel service {service_id} is not in the service list")
                 else:
                     summary.smm_services.append(summarize_service(item))
         except SMMError as exc:
-            summary.warnings.append(f"SMMSOC service metadata unavailable: {exc}")
+            summary.warnings.append(f"SMM panel service metadata unavailable: {exc}")
 
     # Auto-place orders for new posts if enabled.
     if config.smm_auto_order and new_post_ids and not config.dry_run:
@@ -259,7 +259,7 @@ def _smm_checks(
                 entry["post_id"], entry["type"], entry["order_id"], entry["quantity"],
             )
 
-    campaign_summary = refresh_campaign_statuses(plans, {"smmsoc": SMMSOCStatusProvider(smm_client)}, now)
+    campaign_summary = refresh_campaign_statuses(plans, {config.smm_provider: SMMStatusProvider(smm_client, config.smm_provider)}, now)
     summary.campaigns_checked = campaign_summary["checked"]
     summary.verified_spend = campaign_summary["verified_spend"]
     summary.warnings += [f"Campaign status check failed: {e}" for e in campaign_summary["errors"]]

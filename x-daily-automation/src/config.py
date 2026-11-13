@@ -16,6 +16,8 @@ BD_TZ = timezone(timedelta(hours=6), "Asia/Dhaka")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+DEFAULT_SMM_API_URL = "https://bulkfollows.com/api/v2"
+
 _TRUE = {"1", "true", "yes", "on"}
 _FALSE = {"0", "false", "no", "off", ""}
 
@@ -49,10 +51,11 @@ class Config:
     promotion_budget: Optional[float] = None
     promotion_budget_currency: str = "USD"
 
-    # SMMSOC
+    # SMM panel (BulkFollows by default)
     smm_enabled: bool = False
     smm_auto_order: bool = False  # place orders automatically for new posts
-    smm_api_url: Optional[str] = None
+    smm_api_url: str = DEFAULT_SMM_API_URL
+    smm_provider: str = "bulkfollows"  # derived from the API URL; stored on each order
     smm_api_key: Optional[str] = field(default=None, repr=False)
     smm_impression_service_id: Optional[str] = None
     smm_like_service_id: Optional[str] = None
@@ -150,6 +153,12 @@ def _https_url(name: str, raw: str) -> str:
     return raw.rstrip("/")
 
 
+def _provider_name(url: str) -> str:
+    """bulkfollows.com -> "bulkfollows"; keeps orders from different panels apart."""
+    labels = (urlparse(url).hostname or "").split(".")
+    return labels[-2] if len(labels) >= 2 else labels[0] or "smm"
+
+
 def load_config(env: Optional[Mapping[str, str]] = None) -> Config:
     env = os.environ if env is None else env
     errors: list[str] = []
@@ -176,18 +185,14 @@ def load_config(env: Optional[Mapping[str, str]] = None) -> Config:
 
     smm_enabled = _bool(env, "SMM_ENABLED", False)
     smm_auto_order = _bool(env, "SMM_AUTO_ORDER", False)
-    smm_url = _get(env, "SMM_API_URL")
+    smm_url = _get(env, "SMM_API_URL") or DEFAULT_SMM_API_URL
     smm_key = _get(env, "SMM_API_KEY")
-    if smm_enabled:
-        if not smm_url:
-            errors.append("SMM_ENABLED=true requires SMM_API_URL")
-        if not smm_key:
-            errors.append("SMM_ENABLED=true requires SMM_API_KEY")
-    if smm_url:
-        try:
-            smm_url = _https_url("SMM_API_URL", smm_url)
-        except ConfigError as exc:
-            errors.append(str(exc))
+    if smm_enabled and not smm_key:
+        errors.append("SMM_ENABLED=true requires SMM_API_KEY")
+    try:
+        smm_url = _https_url("SMM_API_URL", smm_url)
+    except ConfigError as exc:
+        errors.append(str(exc))
 
     telegram_enabled = _bool(env, "TELEGRAM_ENABLED", False)
     telegram_token = _get(env, "TELEGRAM_BOT_TOKEN")
@@ -236,6 +241,7 @@ def load_config(env: Optional[Mapping[str, str]] = None) -> Config:
         smm_enabled=smm_enabled,
         smm_auto_order=smm_auto_order,
         smm_api_url=smm_url,
+        smm_provider=_provider_name(smm_url),
         smm_api_key=smm_key,
         smm_impression_service_id=_get(env, "SMM_IMPRESSION_SERVICE_ID"),
         smm_like_service_id=_get(env, "SMM_LIKE_SERVICE_ID"),
