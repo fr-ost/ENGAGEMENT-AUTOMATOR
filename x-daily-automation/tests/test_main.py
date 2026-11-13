@@ -243,9 +243,10 @@ def test_auto_order_placed_for_new_posts(mocked, make_config):
     for pid in ("1866000000000000001", "1866000000000000002"):
         types_ordered = {c["type"] for c in campaigns[pid]["authorized_campaigns"]}
         assert types_ordered == {"impressions", "likes"}
+        assert all(c["provider"] == "example" for c in campaigns[pid]["authorized_campaigns"])
     text = report(cfg)
     assert "Auto-orders placed this run: 4" in text
-    assert "auto-ordered via SMMSOC" in text
+    assert "auto-ordered via example" in text
 
 
 def test_auto_order_is_idempotent_on_rerun(mocked, make_config):
@@ -311,7 +312,7 @@ def test_smm_failure_is_not_fatal(mocked, make_config):
     mocked.post(SMM_URL, json={"error": "Invalid API key"})
     smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
     assert main.run(cfg, now=NOW, x_client=client(), smm_client=smm) == 0
-    assert "SMMSOC balance unavailable" in report(cfg)
+    assert "SMM panel balance unavailable" in report(cfg)
 
 
 def test_dry_run_writes_nothing(mocked, make_config, capsys):

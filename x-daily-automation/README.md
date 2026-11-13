@@ -6,10 +6,10 @@ A small Python bot that runs once a day on **GitHub Actions** at **11:00 PM Bang
 2. deduplicates them by post ID and saves them to JSON files in this repo,
 3. creates a **promotion-planning record** for each new post (default target: 1,000 impressions and 30 likes),
 4. tracks progress using X's own public metrics,
-5. optionally reads your **SMMSOC** balance, service metadata, and the status of orders you placed yourself (read-only),
+5. optionally talks to an **SMM panel** (default: [BulkFollows](https://bulkfollows.com/api)): reads your balance and service metadata, and, if you turn on `SMM_AUTO_ORDER`, places an impressions order and a likes order for each new post and tracks their status,
 6. writes a daily Markdown report to `reports/` and optionally sends it to **Telegram**.
 
-> **What it does not do:** it never buys impressions, likes, or any other engagement, and it never places orders or campaigns. Targets are planning goals. If you run paid promotion, you create it yourself (for example in X Ads Manager) and link it to a post so the bot can report on it. See [Linking an authorized campaign](#linking-an-authorized-campaign).
+> **Spending money is opt-in.** With the defaults the bot places no orders; targets are planning goals only. Orders are placed only when both `SMM_ENABLED=true` and `SMM_AUTO_ORDER=true`. See [step 5](#5-configure-the-smm-panel-optional).
 
 ---
 
@@ -21,7 +21,7 @@ A small Python bot that runs once a day on **GitHub Actions** at **11:00 PM Bang
 - [2. Set up Python on macOS](#2-set-up-python-on-macos)
 - [3. Get X API credentials](#3-get-x-api-credentials)
 - [4. Add GitHub Actions secrets and variables](#4-add-github-actions-secrets-and-variables)
-- [5. Configure SMMSOC (optional)](#5-configure-smmsoc-optional)
+- [5. Configure the SMM panel (optional)](#5-configure-the-smm-panel-optional)
 - [6. Enable GitHub Actions](#6-enable-github-actions)
 - [7. Run the workflow manually](#7-run-the-workflow-manually)
 - [8. Verify the first report](#8-verify-the-first-report)
@@ -45,7 +45,7 @@ GitHub Actions (17:00 UTC daily or manual)
        3. X API: user timeline since (last checkpoint − 2h overlap)
        4. dedupe by post ID → save new posts + planning records
        5. refresh public metrics for posts from the last 7 days
-       6. SMMSOC read-only checks    (optional; failures are only warnings)
+       6. SMM panel checks + auto-orders (optional; failures are only warnings)
        7. save state; the checkpoint is written LAST and only after a complete scan
        8. write reports/YYYY-MM-DD.md, then send Telegram (optional; failures never fail the run)
   └─ commit data/ + reports/ (only if changed; rebase on conflict, never force-push)
@@ -68,7 +68,7 @@ x-daily-automation/
 │   ├── deduplication.py         dedupe by immutable post ID
 │   ├── storage.py               atomic JSON writes, validation, lock, recovery
 │   ├── campaign_manager.py      planning records, metrics progress, read-only campaign status
-│   ├── smm_client.py            SMMSOC read-only client (balance/services/status)
+│   ├── smm_client.py            SMM panel API v2 client (balance/services/status/add)
 │   ├── reporter.py              Markdown report + Telegram text
 │   └── telegram.py              Telegram sender (splitting, retries)
 ├── tests/                       pytest suite; all network calls mocked
@@ -148,7 +148,7 @@ On GitHub, open the repo → **Settings → Secrets and variables → Actions**.
 | Name | Required | Value |
 | --- | --- | --- |
 | `X_BEARER_TOKEN` | yes | your X Bearer Token |
-| `SMM_API_KEY` | only if SMMSOC is enabled | SMMSOC API key |
+| `SMM_API_KEY` | only if the SMM panel is enabled | API key from your BulkFollows Account Settings |
 | `TELEGRAM_BOT_TOKEN` | only if Telegram is enabled | from @BotFather |
 | `TELEGRAM_CHAT_ID` | only if Telegram is enabled | your chat ID |
 
@@ -161,34 +161,27 @@ On GitHub, open the repo → **Settings → Secrets and variables → Actions**.
 | `INCLUDE_QUOTE_POSTS` | `true` | set `false` to ignore quote posts |
 | `IMPRESSION_TARGET` / `LIKE_TARGET` | `1000` / `30` | planning targets |
 | `TELEGRAM_ENABLED` | `true` | optional |
-| `SMM_ENABLED`, `SMM_API_URL`, `SMM_*_SERVICE_ID` | | see step 5 |
+| `SMM_ENABLED`, `SMM_AUTO_ORDER`, `SMM_*_SERVICE_ID` | | see step 5 |
 
 Every option is listed in the [Configuration reference](#configuration-reference). GitHub masks secret values in logs, and the bot also strips its known secrets from everything it logs.
 
-## 5. Configure SMMSOC (optional)
+## 5. Configure the SMM panel (optional)
 
-SMMSOC is **off by default**, and the bot works fully without it. When it is enabled, the bot only **reads**: your balance, service metadata for the service IDs you list, and the status of orders you linked yourself. It has no code to place orders.
+The panel integration is **off by default**, and the bot works fully without it. The default provider is **BulkFollows**; the client follows its documented API (<https://bulkfollows.com/api>): `POST https://bulkfollows.com/api/v2` with form fields `key` and `action` (`balance`, `services`, `status`, `add`).
 
-### Verify the SMMSOC API (do this before enabling)
+1. Get your API key from BulkFollows → **Account Settings** and add it as the secret `SMM_API_KEY`.
+2. Set the variable `SMM_ENABLED=true`. On its own this only **reads**: balance, service metadata, and order status.
+3. Pick the services you want from the BulkFollows service list and set `SMM_IMPRESSION_SERVICE_ID` and/or `SMM_LIKE_SERVICE_ID`. Use "Default"-type services (they take a link and a quantity). The report shows each service's name, rate, min and max so you can confirm you picked the right ones.
+4. To place orders automatically, set `SMM_AUTO_ORDER=true`. **This spends your panel balance.** For every newly discovered post the bot orders `IMPRESSION_TARGET` impressions and `LIKE_TARGET` likes (whichever service IDs are set). Make sure the targets are within each service's min/max, or the panel rejects the order.
 
-The official documentation at <https://smmsoc.com/api> **could not be accessed when this client was written**: the build environment's network policy blocked the site. The client therefore follows the request format used by most SMM-panel "API v2" services, and that format is **unverified for SMMSOC**. Open the docs page yourself and confirm each item:
+Safety properties of auto-ordering:
 
-| Assumption in `src/smm_client.py` | Check on the docs page |
-| --- | --- |
-| One URL for every call, e.g. `https://smmsoc.com/api/v2` | the exact API URL |
-| `POST` with form fields `key` and `action` | method and parameter names |
-| `action=balance` → `{"balance": "...", "currency": "..."}` | balance action and response fields |
-| `action=services` → list of objects with `service`, `name`, `rate`, `min`, `max`, … | services action and fields |
-| `action=status&order=<id>` → `{"status", "charge", "start_count", "remains", "currency"}` | status action and fields |
-| errors returned as `{"error": "..."}` | error format |
+- One order per type per post. The order ID is saved in `data/campaigns.json`, and reruns never re-order a post that already has one.
+- Dry runs never place orders.
+- A failed order (low balance, bad service ID, quantity out of range) is recorded as an error on that post and never fails the scan. It is **not retried automatically** on later runs.
+- To turn it off, set `SMM_AUTO_ORDER=false` (or delete the variable).
 
-If anything differs, update `ACTIONS` and the response checks in `src/smm_client.py` and the mocks in `tests/test_smm_client.py`. Then set `DOCUMENTATION_VERIFIED = True`. Any response that doesn't match is reported as a warning. The client never guesses.
-
-Then add:
-
-- Secret `SMM_API_KEY`
-- Variables `SMM_ENABLED=true` and `SMM_API_URL=<the URL from the docs>`
-- Optionally `SMM_IMPRESSION_SERVICE_ID` / `SMM_LIKE_SERVICE_ID`. These service IDs come from the panel's own service list; the bot only shows their metadata in the report.
+**Using another panel.** Any panel that speaks the same v2 protocol works: set `SMM_API_URL` to its endpoint. The provider name stored on each order comes from the URL's domain (`bulkfollows.com` → `bulkfollows`), and status checks only query orders placed on the currently configured panel, so orders from a previous panel are left alone.
 
 ### Linking an authorized campaign
 
@@ -196,7 +189,7 @@ Planning targets are kept separate from campaigns. To have the bot report on a p
 
 ```json
 "authorized_campaigns": [
-  {"provider": "smmsoc", "reference": "<your order ID>", "authorized_by": "<your name>", "authorized_at": "2026-10-26T12:00:00Z"}
+  {"provider": "bulkfollows", "reference": "<your order ID>", "authorized_by": "<your name>", "authorized_at": "2026-10-26T12:00:00Z"}
 ]
 ```
 
@@ -249,7 +242,8 @@ Run it a second time. You should see **New posts this run: 0** and duplicates sk
 | `Scan stopped after X_MAX_PAGES=5 pages` (INCOMPLETE) | You posted more than about 500 posts in the window. Raise the `X_MAX_PAGES` variable and re-run. |
 | `State is invalid; refusing to continue` (exit 3) | A JSON file was hand-edited incorrectly. See [recovery](#10-recovering-from-failed-scans). |
 | `Another run appears to be in progress` (exit 3) | A local run crashed and left `data/.run.lock`. Delete it if no run is active. It is never committed. |
-| `SMMSOC balance unavailable: …` | A wrong key or URL, or the API format differs. See [Verify the SMMSOC API](#verify-the-smmsoc-api-do-this-before-enabling). This is a warning only. |
+| `SMM panel balance unavailable: …` | A wrong `SMM_API_KEY`, or a wrong `SMM_API_URL` if you set one. This is a warning only. |
+| `Auto-order failed (…)` in `data/campaigns.json` | The panel rejected the order: low balance, wrong service ID, or quantity outside the service's min/max. |
 | `Telegram | FAILED: …` | Check the bot token and chat ID, and send your bot a message first. This never fails the scan. |
 | Commit step: `Conflict between this run's state and newer commits` | Someone edited `data/` at the same moment. Nothing was force-pushed, and the next run recovers automatically. |
 | Workflow never runs on schedule | It isn't on the default branch, Actions is disabled, or the repo has been inactive for 60+ days. Re-enable it in the Actions tab. |
@@ -282,7 +276,7 @@ For more detail, set the variable `LOG_LEVEL=DEBUG`.
 | Storage | JSON and Markdown in git: a few KB per day. |
 | Telegram | Free. |
 | X API | **Depends on your developer plan. Check it yourself.** X's tiers and prices have changed repeatedly, and this project does not assume any reads are free. |
-| SMMSOC | The bot only reads (balance, services, status). It never spends money. |
+| SMM panel | Free to read (balance, services, status). With `SMM_AUTO_ORDER=true`, each new post costs the panel's rate for the configured impressions and likes. |
 
 **X API usage per day** (typical):
 
@@ -321,10 +315,11 @@ Long reports are split into several messages under Telegram's 4,096-character li
 | `DRY_RUN` | `false` | Save nothing, send nothing, print the report. |
 | `IMPRESSION_TARGET` / `LIKE_TARGET` | `1000` / `30` | Planning targets per post. |
 | `PROMOTION_BUDGET` / `PROMOTION_BUDGET_CURRENCY` | — / `USD` | Optional planning budget recorded per post. |
-| `SMM_ENABLED` | `false` | Enable SMMSOC read-only checks. |
-| `SMM_API_URL` | — | HTTPS URL from the SMMSOC docs. |
+| `SMM_ENABLED` | `false` | Enable the SMM panel (balance, services, order status). |
+| `SMM_AUTO_ORDER` | `false` | Place orders for each new post. **Spends money.** |
+| `SMM_API_URL` | `https://bulkfollows.com/api/v2` | Set only to use another v2-compatible panel. |
 | `SMM_API_KEY` | — | **Secret.** |
-| `SMM_IMPRESSION_SERVICE_ID` / `SMM_LIKE_SERVICE_ID` | — | Service IDs to show metadata for. |
+| `SMM_IMPRESSION_SERVICE_ID` / `SMM_LIKE_SERVICE_ID` | — | Panel service IDs used for metadata and auto-orders. |
 | `TELEGRAM_ENABLED` | `false` | Send the daily summary. |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | — | **Secrets.** |
 | `X_COST_PER_REQUEST_USD` / `X_COST_PER_POST_READ_USD` | — | Your verified prices, for cost estimates. |

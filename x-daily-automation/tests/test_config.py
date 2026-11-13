@@ -19,6 +19,14 @@ def test_defaults():
     assert cfg.smm_enabled is False and cfg.telegram_enabled is False
 
 
+def test_smm_defaults_to_bulkfollows_and_derives_provider():
+    cfg = load_config(base(SMM_ENABLED="true", SMM_API_KEY="k"))
+    assert cfg.smm_api_url == "https://bulkfollows.com/api/v2"
+    assert cfg.smm_provider == "bulkfollows"
+    other = load_config(base(SMM_API_URL="https://smmsoc.com/api/v2"))
+    assert other.smm_provider == "smmsoc"
+
+
 def test_missing_required_values_listed_together():
     with pytest.raises(ConfigError) as excinfo:
         load_config({})
@@ -28,7 +36,7 @@ def test_missing_required_values_listed_together():
 @pytest.mark.parametrize(
     "extra,needle",
     [
-        ({"SMM_ENABLED": "true"}, "SMM_API_URL"),
+        ({"SMM_ENABLED": "true"}, "SMM_API_KEY"),
         ({"SMM_ENABLED": "true", "SMM_API_URL": "http://insecure.test", "SMM_API_KEY": "k"}, "https"),
         ({"TELEGRAM_ENABLED": "true"}, "TELEGRAM_BOT_TOKEN"),
         ({"X_MAX_PAGES": "0"}, "X_MAX_PAGES"),

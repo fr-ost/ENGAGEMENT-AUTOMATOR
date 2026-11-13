@@ -45,11 +45,10 @@ class CampaignStatusProvider(Protocol):
     def get_status(self, reference: str) -> dict[str, Any]: ...
 
 
-class SMMSOCStatusProvider:
-    name = "smmsoc"
-
-    def __init__(self, client: SMMClient):
+class SMMStatusProvider:
+    def __init__(self, client: SMMClient, name: str):
         self._client = client
+        self.name = name
 
     def get_status(self, reference: str) -> dict[str, Any]:
         status = self._client.get_order_status(reference)
@@ -252,7 +251,7 @@ def auto_place_orders(
             try:
                 result = smm_client.place_order(service_id, link, quantity)
                 campaign_entry: dict[str, Any] = {
-                    "provider": "smmsoc",
+                    "provider": config.smm_provider,
                     "reference": result.order_id,
                     "authorized_by": "auto",
                     "authorized_at": stamp,

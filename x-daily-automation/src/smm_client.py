@@ -1,21 +1,16 @@
-"""SMM panel API v2 client for SMMSOC.
+"""SMM panel "API v2" client (default provider: BulkFollows).
 
-VERIFICATION STATUS — READ BEFORE ENABLING
-------------------------------------------
-The official documentation at https://smmsoc.com/api could NOT be retrieved
-while this client was written (the build environment's network policy blocked
-the host). The request format below therefore follows the convention shared
-by most SMM panel "API v2" implementations and is UNVERIFIED for SMMSOC:
+Request format, checked against https://bulkfollows.com/api:
 
-  * a single endpoint (configured as SMM_API_URL, e.g. https://smmsoc.com/api/v2)
+  * one endpoint, https://bulkfollows.com/api/v2 (override with SMM_API_URL to
+    use another panel that speaks the same v2 protocol)
   * HTTP POST, form-encoded, with parameters `key` and `action`
   * actions used here: `balance`, `services`, `status`, `add`
+  * `add` (Default type) takes `service`, `link`, `quantity` -> {"order": 23501}
   * errors returned as a JSON object with an `error` string
 
 Every response is validated; anything that does not match is reported as an
 error rather than guessed at. The client is disabled unless SMM_ENABLED=true.
-Compare ACTIONS and the response checks below with the official docs before
-turning it on (see README "Verify the SMMSOC API").
 
 Order placement (action=add) is gated behind SMM_AUTO_ORDER=true and is only
 called from campaign_manager.auto_place_orders for newly discovered posts.
@@ -32,8 +27,6 @@ from urllib.parse import urlparse
 import requests
 
 log = logging.getLogger(__name__)
-
-DOCUMENTATION_VERIFIED = False
 
 ACTIONS = {
     "balance": "balance",

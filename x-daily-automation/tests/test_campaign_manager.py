@@ -128,7 +128,7 @@ def test_auto_place_orders_places_impression_and_like(make_config):
     campaigns = plans["1"]["authorized_campaigns"]
     assert len(campaigns) == 2
     assert all(c["authorized_by"] == "auto" for c in campaigns)
-    assert all(c["provider"] == "smmsoc" for c in campaigns)
+    assert all(c["provider"] == "bulkfollows" for c in campaigns)
     imp_order = next(c for c in campaigns if c["type"] == "impressions")
     assert imp_order["service_id"] == "5"
     assert imp_order["quantity"] == 1000
