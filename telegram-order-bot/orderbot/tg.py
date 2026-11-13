@@ -40,6 +40,15 @@ class Telegram:
         )
         return result if isinstance(result, list) else []
 
+    def delete(self, chat_id: int, message_id: int) -> bool:
+        """Remove a message (used for messages that contain an API key)."""
+        try:
+            self._call("deleteMessage", {"chat_id": chat_id, "message_id": message_id}, timeout=15)
+            return True
+        except TelegramError as exc:
+            log.warning("Could not delete a Telegram message: %s", exc)
+            return False
+
     def send(self, chat_id: int, text: str) -> None:
         """Best effort: a failed notification must never break order processing."""
         try:

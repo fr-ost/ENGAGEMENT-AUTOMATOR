@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     link TEXT NOT NULL,
     views INTEGER NOT NULL,
     likes INTEGER NOT NULL,
-    chat_id INTEGER NOT NULL,
+    chat_id INTEGER NOT NULL,      -- the owning user (private chat ID = user ID)
     status TEXT NOT NULL,          -- active | done | cancelled
     created_at REAL NOT NULL
 );
@@ -31,6 +31,11 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 CREATE INDEX IF NOT EXISTS orders_due ON orders(status, due_at);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS users (
+    user_id INTEGER PRIMARY KEY,   -- Telegram user ID (= private chat ID)
+    api_key TEXT,                  -- that user's own panel API key
+    added_at REAL NOT NULL
+);
 """
 
 OPEN = ("pending", "placing")
@@ -58,6 +63,45 @@ class Store:
                 (key, str(value)),
             )
 
+    def delete_settings(self, prefix: str) -> None:
+        with self._db:
+            self._db.execute("DELETE FROM settings WHERE substr(key, 1, ?) = ?", (len(prefix), prefix))
+
+    # -- users ------------------------------------------------------------
+
+    def users(self) -> list[sqlite3.Row]:
+        return self._db.execute("SELECT * FROM users ORDER BY added_at, user_id").fetchall()
+
+    def has_user(self, user_id: int) -> bool:
+        return self._db.execute("SELECT 1 FROM users WHERE user_id=?", (user_id,)).fetchone() is not None
+
+    def add_user(self, user_id: int, now: float) -> None:
+        with self._db:
+            self._db.execute("INSERT OR IGNORE INTO users(user_id, added_at) VALUES(?, ?)", (user_id, now))
+
+    def set_api_key(self, user_id: int, api_key: str, now: float) -> None:
+        with self._db:
+            self._db.execute(
+                "INSERT INTO users(user_id, api_key, added_at) VALUES(?, ?, ?) "
+                "ON CONFLICT(user_id) DO UPDATE SET api_key=excluded.api_key",
+                (user_id, api_key, now),
+            )
+
+    def api_key(self, user_id: int) -> Optional[str]:
+        row = self._db.execute("SELECT api_key FROM users WHERE user_id=?", (user_id,)).fetchone()
+        return row["api_key"] if row else None
+
+    def remove_user(self, user_id: int) -> int:
+        """Delete the user and their key; cancel whatever they still had queued."""
+        with self._db:
+            cur = self._db.execute(
+                "UPDATE orders SET status='cancelled' WHERE status='pending' "
+                "AND job_id IN (SELECT id FROM jobs WHERE chat_id=?)", (user_id,)
+            )
+            self._db.execute("UPDATE jobs SET status='cancelled' WHERE chat_id=? AND status='active'", (user_id,))
+            self._db.execute("DELETE FROM users WHERE user_id=?", (user_id,))
+        return cur.rowcount
+
     # -- jobs -------------------------------------------------------------
 
     def create_job(
@@ -80,11 +124,15 @@ class Store:
     def job(self, job_id: int) -> Optional[sqlite3.Row]:
         return self._db.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
 
-    def active_job_for_link(self, link: str) -> Optional[sqlite3.Row]:
-        return self._db.execute("SELECT * FROM jobs WHERE link=? AND status='active'", (link,)).fetchone()
+    def active_job_for_link(self, link: str, user_id: int) -> Optional[sqlite3.Row]:
+        return self._db.execute(
+            "SELECT * FROM jobs WHERE link=? AND chat_id=? AND status='active'", (link, user_id)
+        ).fetchone()
 
-    def recent_jobs(self, limit: int = 5) -> list[sqlite3.Row]:
-        return self._db.execute("SELECT * FROM jobs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    def recent_jobs(self, user_id: int, limit: int = 5) -> list[sqlite3.Row]:
+        return self._db.execute(
+            "SELECT * FROM jobs WHERE chat_id=? ORDER BY id DESC LIMIT ?", (user_id, limit)
+        ).fetchall()
 
     def set_job_status(self, job_id: int, status: str) -> None:
         with self._db:

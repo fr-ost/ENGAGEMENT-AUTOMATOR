@@ -22,7 +22,7 @@ LINK_RE = re.compile(r"https?://(?:www\.|mobile\.)?(?:x|twitter)\.com/([A-Za-z0-
 NUMBER_RE = re.compile(r"^(\d[\d,]*)(k?)$", re.I)
 BD_TZ = timezone(timedelta(hours=6))
 
-HELP = """Send an X post link and I order views and likes for it.
+HELP = """Send an X post link and I order views and likes for it, using your own panel account.
 
   https://x.com/user/status/123            → default views and likes
   https://x.com/user/status/123 5000 100   → 5,000 views, 100 likes
@@ -38,7 +38,24 @@ Views are split into several uneven orders spread over time. Likes go as one ord
 /status – recent jobs · /status 3 – one job in detail
 /cancel 3 – stop the orders of job 3 that are not placed yet
 /retry 3 – re-queue rejected orders of job 3
-/balance – panel balance"""
+/balance – your panel balance
+/setkey – set or replace your panel API key"""
+
+ADMIN_HELP = """
+
+Admin:
+/adduser 123456789 – give a teammate access (they get their ID by messaging me)
+/removeuser 123456789 – remove access, delete their key, cancel their queued orders
+/users – who has access"""
+
+NO_KEY = "First connect your panel account: send /setkey and then your API key (BulkFollows → Account Settings)."
+
+
+@dataclass(frozen=True)
+class Ctx:
+    user: int
+    message_id: Optional[int]
+    admin: bool
 
 
 @dataclass(frozen=True)
@@ -73,32 +90,61 @@ class App:
         self,
         config: Config,
         store: Store,
-        panel: Panel,
+        panel_for: Callable[[str], Panel],
         tg: Telegram,
         rng: Optional[random.Random] = None,
         clock: Callable[[], float] = time.time,
     ):
         self.config = config
         self.store = store
-        self.panel = panel
+        self.panel_for = panel_for
         self.tg = tg
         self.rng = rng or random.Random()
         self.clock = clock
-        self._services: tuple[float, list[dict[str, Any]]] = (0.0, [])
+        self._panels: dict[int, tuple[str, Panel]] = {}
+        self._services: dict[int, tuple[float, list[dict[str, Any]]]] = {}
+
+    # -- users --------------------------------------------------------------
+
+    def _authorised(self, user: Any) -> bool:
+        return isinstance(user, int) and (user in self.config.owner_ids or self.store.has_user(user))
+
+    def _member_ids(self) -> set[int]:
+        return set(self.config.owner_ids) | {row["user_id"] for row in self.store.users()}
+
+    def _panel(self, user: int) -> Optional[Panel]:
+        """The panel client for this user's own API key, or None if they have not set one."""
+        key = self.store.api_key(user)
+        if not key:
+            return None
+        cached = self._panels.get(user)
+        if cached is None or cached[0] != key:
+            cached = (key, self.panel_for(key))
+            self._panels[user] = cached
+        return cached[1]
+
+    def _forget(self, user: int) -> None:
+        self._panels.pop(user, None)
+        self._services.pop(user, None)
 
     # -- settings -----------------------------------------------------------
 
-    def settings(self) -> Settings:
-        get = self.store.get_setting
+    def _set(self, user: int, key: str, value: Any) -> None:
+        self.store.set_setting(f"u{user}:{key}", value)
+
+    def settings(self, user: int) -> Settings:
+        def get(key: str, default: Any) -> str:
+            return self.store.get_setting(f"u{user}:{key}", str(default))
+
         return Settings(
-            views=int(get("views", str(self.config.default_views))),
-            likes=int(get("likes", str(self.config.default_likes))),
-            spread_hours=float(get("spread_hours", str(self.config.spread_hours))),
-            splits=(int(get("splits_min", "10")), int(get("splits_max", "12"))),
+            views=int(get("views", self.config.default_views)),
+            likes=int(get("likes", self.config.default_likes)),
+            spread_hours=float(get("spread_hours", self.config.spread_hours)),
+            splits=(int(get("splits_min", 10)), int(get("splits_max", 12))),
         )
 
-    def _settings_text(self) -> str:
-        s = self.settings()
+    def _settings_text(self, user: int) -> str:
+        s = self.settings(user)
         return (
             f"Views per link: {s.views:,}\nLikes per link: {s.likes:,}\n"
             f"View orders per link: {s.splits[0]}-{s.splits[1]}, placed over {s.spread_hours:g}h\n"
@@ -123,43 +169,78 @@ class App:
             self.store.set_setting("last_update_at", self.clock())
         message = update.get("message") or {}
         text = (message.get("text") or "").strip()
-        chat_id = (message.get("chat") or {}).get("id")
-        user_id = (message.get("from") or {}).get("id")
+        chat = message.get("chat") or {}
+        chat_id = chat.get("id")
+        user = (message.get("from") or {}).get("id")
         if chat_id is None or not text:
             return
-        if user_id not in self.config.owner_ids:
-            self.tg.send(chat_id, f"Not authorised. Your Telegram user ID is {user_id}.")
+        if chat.get("type") != "private" or chat_id != user:
+            # API keys are typed into this bot, so it never works where other people can read along.
+            self.tg.send(chat_id, "I only work in a private chat. Message me directly.")
             return
+        if not self._authorised(user):
+            self.tg.send(chat_id, f"You don't have access yet. Send this ID to the admin: {user}")
+            return
+        ctx = Ctx(user=user, message_id=message.get("message_id"), admin=user in self.config.owner_ids)
         try:
-            reply = self._dispatch(text, chat_id)
+            reply = self._dispatch(text, ctx)
         except PanelError as exc:
             reply = f"Panel error: {exc}"
         if reply:
             self.tg.send(chat_id, reply)
 
-    def _dispatch(self, text: str, chat_id: int) -> str:
-        if not text.startswith("/"):
-            return self._new_job(text, chat_id)
-        parts = text.split()
-        command = parts[0][1:].split("@")[0].lower()
-        handler = getattr(self, f"_cmd_{command}", None) if command.isalpha() else None
-        if handler is None:
-            return "Unknown command. /help shows what I understand."
-        return handler(parts[1:])
+    def _dispatch(self, text: str, ctx: Ctx) -> str:
+        if text.startswith("/"):
+            self._set(ctx.user, "awaiting_key", 0)
+            parts = text.split()
+            command = parts[0][1:].split("@")[0].lower()
+            handler = getattr(self, f"_cmd_{command}", None) if command.isalpha() else None
+            if handler is None:
+                return "Unknown command. /help shows what I understand."
+            return handler(parts[1:], ctx)
+        if self.store.get_setting(f"u{ctx.user}:awaiting_key") == "1" and not LINK_RE.search(text):
+            return self._save_key(text, ctx)
+        return self._new_job(text, ctx.user)
+
+    # -- API key setup ------------------------------------------------------
+
+    def _cmd_setkey(self, args: list[str], ctx: Ctx) -> str:
+        if args:
+            return self._save_key(args[0], ctx)
+        self._set(ctx.user, "awaiting_key", 1)
+        return "Send me your panel API key now (BulkFollows → Account Settings). I will delete the message after reading it."
+
+    def _save_key(self, key: str, ctx: Ctx) -> str:
+        key = key.strip()
+        deleted = ctx.message_id is not None and self.tg.delete(ctx.user, ctx.message_id)
+        cleanup = "" if deleted else "\nI could not delete your message with the key — please delete it yourself."
+        if not 8 <= len(key) <= 200 or len(key.split()) != 1:
+            return "That does not look like an API key. Send /setkey and try again." + cleanup
+        try:
+            amount, currency = self.panel_for(key).balance()
+        except PanelRejected as exc:
+            return f"The panel did not accept that key ({exc}). Nothing was saved. Send /setkey to try again." + cleanup
+        except PanelError as exc:
+            return f"Could not reach the panel to check the key ({exc}). Nothing was saved. Send /setkey to try again." + cleanup
+        self.store.set_api_key(ctx.user, key, self.clock())
+        self._set(ctx.user, "awaiting_key", 0)
+        self._forget(ctx.user)
+        log.info("User %d set an API key", ctx.user)
+        return f"Key saved. Your panel balance: {amount:.2f} {currency}".strip() + "\nNow send me an X post link." + cleanup
 
     # -- new job ------------------------------------------------------------
 
-    def _panel_services(self) -> list[dict[str, Any]]:
-        fetched_at, services = self._services
+    def _service(self, user: int, panel: Panel, service_id: str) -> Optional[dict[str, Any]]:
+        fetched_at, services = self._services.get(user, (0.0, []))
         if not services or self.clock() - fetched_at > self.SERVICES_CACHE_SECONDS:
-            services = self.panel.services()
-            self._services = (self.clock(), services)
-        return services
+            services = panel.services()
+            self._services[user] = (self.clock(), services)
+        return next((s for s in services if str(s.get("service")) == str(service_id)), None)
 
-    def _service(self, service_id: str) -> Optional[dict[str, Any]]:
-        return next((s for s in self._panel_services() if str(s.get("service")) == str(service_id)), None)
-
-    def _new_job(self, text: str, chat_id: int) -> str:
+    def _new_job(self, text: str, user: int) -> str:
+        panel = self._panel(user)
+        if panel is None:
+            return NO_KEY
         match = LINK_RE.search(text)
         if not match:
             return "Send an X post link (https://x.com/user/status/123), optionally followed by views and likes. /help"
@@ -171,7 +252,7 @@ class App:
                 numbers.append(int(found[1].replace(",", "")) * (1000 if found[2] else 1))
         if len(numbers) > 2:
             return "I understand at most two numbers after the link: views, then likes. Nothing was ordered."
-        s = self.settings()
+        s = self.settings(user)
         views = numbers[0] if numbers else s.views
         likes = numbers[1] if len(numbers) == 2 else s.likes
         if views == 0 and likes == 0:
@@ -181,13 +262,13 @@ class App:
                 f"That is above the safety limit ({self.config.max_views:,} views, {self.config.max_likes:,} likes "
                 "per link). Nothing was ordered. Raise MAX_VIEWS / MAX_LIKES if you meant it."
             )
-        running = self.store.active_job_for_link(link)
+        running = self.store.active_job_for_link(link, user)
         if running:
             return f"Job #{running['id']} is still placing orders for this link. /cancel {running['id']} first, or wait."
 
         try:
-            view_service = self._service(self.config.view_service_id) if views else None
-            like_service = self._service(self.config.like_service_id) if likes else None
+            view_service = self._service(user, panel, self.config.view_service_id) if views else None
+            like_service = self._service(user, panel, self.config.like_service_id) if likes else None
         except PanelError as exc:
             return f"Could not read the panel's service list ({exc}). Nothing was ordered."
 
@@ -228,8 +309,8 @@ class App:
             add_cost(like_service, likes)
             lines.append(f"Likes: {likes:,} in one order, now")
 
-        job_id = self.store.create_job(link, views, likes, chat_id, now, orders)
-        log.info("Job %d created: views=%d likes=%d orders=%d", job_id, views, likes, len(orders))
+        job_id = self.store.create_job(link, views, likes, user, now, orders)
+        log.info("Job %d created for user %d: views=%d likes=%d orders=%d", job_id, user, views, likes, len(orders))
         if cost_known:
             lines.append(f"Estimated cost: {cost:.4f} (panel currency)")
         lines.append(f"/status {job_id} · /cancel {job_id}")
@@ -240,16 +321,22 @@ class App:
     def process_due(self) -> None:
         for order in self.store.due_orders(self.clock()):
             job = self.store.job(order["job_id"])
-            if job is not None and job["status"] == "active":
-                self._place(order, job)
+            if job is None or job["status"] != "active":
+                continue
+            panel = self._panel(job["chat_id"])
+            if panel is None:
+                self.store.update_order(order["id"], status="failed", error="no API key set")
+                self._finish_if_done(job["id"])
+                continue
+            self._place(order, job, panel)
 
-    def _place(self, order: Any, job: Any) -> None:
+    def _place(self, order: Any, job: Any, panel: Panel) -> None:
         order_id, job_id, kind, quantity = order["id"], job["id"], order["kind"], order["quantity"]
         attempts = order["attempts"] + 1
         # Marked before the call: if the process dies mid-request, recover() flags it instead of re-buying.
         self.store.update_order(order_id, status="placing", attempts=attempts)
         try:
-            panel_order_id = self.panel.add(order["service_id"], job["link"], quantity)
+            panel_order_id = panel.add(order["service_id"], job["link"], quantity)
         except PanelRejected as exc:
             message = str(exc)
             if "active order" in message.lower() and attempts < self.MAX_ATTEMPTS:
@@ -324,8 +411,9 @@ class App:
     def _job_detail(self, job: Any) -> str:
         orders = self.store.job_orders(job["id"])
         panel_ids = [o["panel_order_id"] for o in orders if o["panel_order_id"]]
+        panel = self._panel(job["chat_id"])
         try:
-            statuses = self.panel.statuses(panel_ids) if panel_ids else {}
+            statuses = panel.statuses(panel_ids) if panel and panel_ids else {}
         except PanelError:
             statuses = {}
         lines = [self._job_summary(job), ""]
@@ -347,72 +435,79 @@ class App:
 
     # -- commands -----------------------------------------------------------
 
-    def _cmd_start(self, args: list[str]) -> str:
-        return HELP
+    def _cmd_start(self, args: list[str], ctx: Ctx) -> str:
+        text = HELP + (ADMIN_HELP if ctx.admin else "")
+        return text if self.store.api_key(ctx.user) else NO_KEY + "\n\n" + text
 
     _cmd_help = _cmd_start
 
-    def _cmd_settings(self, args: list[str]) -> str:
-        return self._settings_text()
+    def _cmd_settings(self, args: list[str], ctx: Ctx) -> str:
+        return self._settings_text(ctx.user)
 
-    def _set_number(self, args: list[str], key: str, label: str, maximum: int) -> str:
+    def _set_number(self, args: list[str], ctx: Ctx, key: str, maximum: int) -> str:
         if not args:
-            return self._settings_text()
+            return self._settings_text(ctx.user)
         found = NUMBER_RE.match(args[0])
         if not found:
             return f"Usage: /{key} 5000"
         value = int(found[1].replace(",", "")) * (1000 if found[2] else 1)
         if value > maximum:
             return f"{value:,} is above the safety limit of {maximum:,}."
-        self.store.set_setting(key, value)
-        return f"Default {label} per link: {value:,}"
+        self._set(ctx.user, key, value)
+        return f"Default {key} per link: {value:,}"
 
-    def _cmd_views(self, args: list[str]) -> str:
-        return self._set_number(args, "views", "views", self.config.max_views)
+    def _cmd_views(self, args: list[str], ctx: Ctx) -> str:
+        return self._set_number(args, ctx, "views", self.config.max_views)
 
-    def _cmd_likes(self, args: list[str]) -> str:
-        return self._set_number(args, "likes", "likes", self.config.max_likes)
+    def _cmd_likes(self, args: list[str], ctx: Ctx) -> str:
+        return self._set_number(args, ctx, "likes", self.config.max_likes)
 
-    def _cmd_spread(self, args: list[str]) -> str:
+    def _cmd_spread(self, args: list[str], ctx: Ctx) -> str:
         try:
             hours = float(args[0])
         except (IndexError, ValueError):
             return "Usage: /spread 12  (hours over which view orders are placed)"
         if not 0 <= hours <= 72:
             return "Spread must be between 0 and 72 hours."
-        self.store.set_setting("spread_hours", hours)
+        self._set(ctx.user, "spread_hours", hours)
         return f"View orders will be placed over {hours:g}h."
 
-    def _cmd_splits(self, args: list[str]) -> str:
+    def _cmd_splits(self, args: list[str], ctx: Ctx) -> str:
         try:
             low, high = int(args[0]), int(args[1])
         except (IndexError, ValueError):
             return "Usage: /splits 10 12  (minimum and maximum view orders per link)"
         if not 1 <= low <= high <= 50:
             return "Use two numbers between 1 and 50, smaller first."
-        self.store.set_setting("splits_min", low)
-        self.store.set_setting("splits_max", high)
+        self._set(ctx.user, "splits_min", low)
+        self._set(ctx.user, "splits_max", high)
         return f"Views will be split into {low}-{high} orders."
 
-    def _cmd_balance(self, args: list[str]) -> str:
-        amount, currency = self.panel.balance()
+    def _cmd_balance(self, args: list[str], ctx: Ctx) -> str:
+        panel = self._panel(ctx.user)
+        if panel is None:
+            return NO_KEY
+        amount, currency = panel.balance()
         return f"Panel balance: {amount:.2f} {currency}".strip()
 
-    def _job_from_args(self, args: list[str], usage: str) -> tuple[Optional[Any], str]:
+    def _own_job(self, args: list[str], ctx: Ctx, usage: str) -> tuple[Optional[Any], str]:
+        """Users only ever see and control their own jobs."""
         if not args or not args[0].lstrip("#").isdigit():
             return None, usage
         job = self.store.job(int(args[0].lstrip("#")))
-        return job, "" if job else f"There is no job {args[0]}."
+        if job is None or job["chat_id"] != ctx.user:
+            return None, f"You have no job {args[0]}."
+        return job, ""
 
-    def _cmd_status(self, args: list[str]) -> str:
+    def _cmd_status(self, args: list[str], ctx: Ctx) -> str:
         if not args:
-            jobs = self.store.recent_jobs()
+            jobs = self.store.recent_jobs(ctx.user)
             return "\n\n".join(self._job_summary(j) for j in jobs) if jobs else "No jobs yet. Send me a link."
-        job, problem = self._job_from_args(args, "Usage: /status 3")
+        job, problem = self._own_job(args, ctx, "Usage: /status 3")
         return self._job_detail(job) if job else problem
 
-    def _cmd_cancel(self, args: list[str]) -> str:
-        job, problem = self._job_from_args(args, "Usage: /cancel 3")
+    def _cmd_cancel(self, args: list[str], ctx: Ctx) -> str:
+        job, problem = self._own_job(args, ctx, "Usage: /cancel 3")
         if not job:
             return problem
         cancelled = self.store.cancel_pending(job["id"])
@@ -423,8 +518,8 @@ class App:
             "Orders already placed on the panel keep running."
         )
 
-    def _cmd_retry(self, args: list[str]) -> str:
-        job, problem = self._job_from_args(args, "Usage: /retry 3   (or /retry 3 all to include unclear ones)")
+    def _cmd_retry(self, args: list[str], ctx: Ctx) -> str:
+        job, problem = self._own_job(args, ctx, "Usage: /retry 3   (or /retry 3 all to include unclear ones)")
         if not job:
             return problem
         wanted = ("failed", "unknown") if "all" in [a.lower() for a in args[1:]] else ("failed",)
@@ -437,6 +532,52 @@ class App:
             self.store.update_order(order["id"], status="pending", due_at=now + index * 300, attempts=0, error=None)
         self.store.set_job_status(job["id"], "active")
         return f"Job #{job['id']}: {len(orders)} order(s) re-queued."
+
+    # -- admin commands -----------------------------------------------------
+
+    @staticmethod
+    def _user_id_arg(args: list[str]) -> Optional[int]:
+        return int(args[0]) if args and args[0].isdigit() else None
+
+    def _cmd_adduser(self, args: list[str], ctx: Ctx) -> str:
+        if not ctx.admin:
+            return "Only the admin can do that."
+        new_user = self._user_id_arg(args)
+        if new_user is None:
+            return "Usage: /adduser 123456789  (the ID I show your teammate when they message me)"
+        members = self._member_ids()
+        if new_user in members:
+            return f"{new_user} already has access."
+        if len(members) >= self.config.max_users:
+            return f"The limit of {self.config.max_users} users is reached. /removeuser someone first."
+        self.store.add_user(new_user, self.clock())
+        self.tg.send(new_user, "You now have access. Send /start to set up your panel API key.")
+        return f"{new_user} added ({len(members) + 1}/{self.config.max_users} users). They must send /setkey before ordering."
+
+    def _cmd_removeuser(self, args: list[str], ctx: Ctx) -> str:
+        if not ctx.admin:
+            return "Only the admin can do that."
+        target = self._user_id_arg(args)
+        if target is None:
+            return "Usage: /removeuser 123456789"
+        if target in self.config.owner_ids:
+            return "Admins are set in TELEGRAM_OWNER_ID and cannot be removed from here."
+        if not self.store.has_user(target):
+            return f"{target} is not a user."
+        cancelled = self.store.remove_user(target)
+        self.store.delete_settings(f"u{target}:")
+        self._forget(target)
+        return f"{target} removed, their API key deleted, {cancelled} queued order(s) cancelled."
+
+    def _cmd_users(self, args: list[str], ctx: Ctx) -> str:
+        if not ctx.admin:
+            return "Only the admin can do that."
+        members = sorted(self._member_ids())
+        lines = [f"Users: {len(members)}/{self.config.max_users}"]
+        for member in members:
+            role = "admin" if member in self.config.owner_ids else "member"
+            lines.append(f"{member} — {role}, {'key set' if self.store.api_key(member) else 'no key yet'}")
+        return "\n".join(lines)
 
     # -- main loop ----------------------------------------------------------
 

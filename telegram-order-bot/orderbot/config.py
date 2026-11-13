@@ -18,7 +18,6 @@ class ConfigError(Exception):
 class Config:
     telegram_token: str = field(repr=False)
     owner_ids: frozenset
-    smm_api_key: str = field(repr=False)
     view_service_id: str
     like_service_id: str
     smm_api_url: str = DEFAULT_SMM_API_URL
@@ -28,6 +27,7 @@ class Config:
     spread_hours: float = 12.0
     max_views: int = 100_000
     max_likes: int = 5_000
+    max_users: int = 10
 
 
 def load_config(env: Optional[Mapping[str, str]] = None) -> Config:
@@ -57,7 +57,6 @@ def load_config(env: Optional[Mapping[str, str]] = None) -> Config:
         return value
 
     token = required("TELEGRAM_BOT_TOKEN")
-    key = required("SMM_API_KEY")
     view_service = required("SMM_VIEW_SERVICE_ID")
     like_service = required("SMM_LIKE_SERVICE_ID")
 
@@ -67,7 +66,7 @@ def load_config(env: Optional[Mapping[str, str]] = None) -> Config:
         if part.lstrip("-").isdigit():
             owner_ids.add(int(part))
         elif part:
-            errors.append("TELEGRAM_OWNER_ID must be numeric Telegram user IDs, comma-separated")
+            errors.append("TELEGRAM_OWNER_ID must be numeric Telegram user IDs (the admins), comma-separated")
 
     url = get("SMM_API_URL") or DEFAULT_SMM_API_URL
     if not url.startswith("https://"):
@@ -79,13 +78,13 @@ def load_config(env: Optional[Mapping[str, str]] = None) -> Config:
         spread_hours=number("SPREAD_HOURS", 12.0, float),
         max_views=number("MAX_VIEWS", 100_000),
         max_likes=number("MAX_LIKES", 5_000),
+        max_users=number("MAX_USERS", 10),
     )
     if errors:
         raise ConfigError("Invalid configuration:\n  - " + "\n  - ".join(errors))
     return Config(
         telegram_token=token,
         owner_ids=frozenset(owner_ids),
-        smm_api_key=key,
         view_service_id=view_service,
         like_service_id=like_service,
         smm_api_url=url.rstrip("/"),

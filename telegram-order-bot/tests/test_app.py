@@ -8,6 +8,9 @@ from orderbot.panel import PanelRejected, PanelUncertain
 from orderbot.store import Store
 
 OWNER = 111
+MEMBER = 222
+OWNER_KEY = "owner-key-0001"
+MEMBER_KEY = "member-key-0002"
 LINK = "https://x.com/someone/status/1866000000000000001"
 SERVICES = [
     {"service": 5, "name": "X views", "rate": "0.10", "min": "100", "max": "1000000"},
@@ -16,7 +19,8 @@ SERVICES = [
 
 
 class FakePanel:
-    def __init__(self):
+    def __init__(self, key="?"):
+        self.key = key
         self.orders = []
         self.fail_with = None
         self.next_id = 9000
@@ -25,6 +29,8 @@ class FakePanel:
         return SERVICES
 
     def balance(self):
+        if self.key.startswith("bad"):
+            raise PanelRejected("Invalid API key")
         return 12.5, "USD"
 
     def add(self, service_id, link, quantity):
@@ -41,9 +47,16 @@ class FakePanel:
 class FakeTelegram:
     def __init__(self):
         self.sent = []
+        self.to = []
+        self.deleted = []
 
     def send(self, chat_id, text):
         self.sent.append(text)
+        self.to.append(chat_id)
+
+    def delete(self, chat_id, message_id):
+        self.deleted.append((chat_id, message_id))
+        return True
 
 
 class Clock:
@@ -57,17 +70,32 @@ class Clock:
 @pytest.fixture
 def bot():
     config = load_config({
-        "TELEGRAM_BOT_TOKEN": "1:tok", "TELEGRAM_OWNER_ID": str(OWNER), "SMM_API_KEY": "k",
-        "SMM_VIEW_SERVICE_ID": "5", "SMM_LIKE_SERVICE_ID": "7",
+        "TELEGRAM_BOT_TOKEN": "1:tok", "TELEGRAM_OWNER_ID": str(OWNER),
+        "SMM_VIEW_SERVICE_ID": "5", "SMM_LIKE_SERVICE_ID": "7", "MAX_USERS": "3",
     })
-    app = App(config, Store(":memory:"), FakePanel(), FakeTelegram(), rng=random.Random(7), clock=Clock())
+    panels = {}
+
+    def panel_for(key):
+        return panels.setdefault(key, FakePanel(key))
+
+    app = App(config, Store(":memory:"), panel_for, FakeTelegram(), rng=random.Random(7), clock=Clock())
     app.counter = 0
+    app.panels = panels
+    say(app, f"/setkey {OWNER_KEY}")
+    app.panel = panels[OWNER_KEY]          # the owner's panel account
     return app
 
 
-def say(app, text, user=OWNER):
+def update(app, text, user, chat_type="private", chat_id=None):
     app.counter += 1
-    app.handle_update({"update_id": app.counter, "message": {"text": text, "chat": {"id": user}, "from": {"id": user}}})
+    return {"update_id": app.counter, "message": {
+        "message_id": 1000 + app.counter, "text": text,
+        "chat": {"id": chat_id or user, "type": chat_type}, "from": {"id": user},
+    }}
+
+
+def say(app, text, user=OWNER):
+    app.handle_update(update(app, text, user))
     return app.tg.sent[-1] if app.tg.sent else None
 
 
@@ -83,8 +111,8 @@ def test_config_lists_missing_values():
 
 def test_strangers_cannot_order(bot):
     reply = say(bot, f"{LINK} 5000 100", user=999)
-    assert "Not authorised" in reply and "999" in reply
-    assert bot.store.recent_jobs() == []
+    assert "don't have access" in reply and "999" in reply
+    assert bot.store.job(1) is None
 
 
 def test_link_orders_likes_at_once_and_views_split_over_12_hours(bot):
@@ -135,7 +163,7 @@ def test_views_only_and_bad_input(bot):
     assert "safety limit" in say(bot, f"{LINK} 5000000")
     assert "below the service minimum" in say(bot, f"{LINK} 50 0")
     assert "outside the service limits" in say(bot, f"{LINK} 1000 5")
-    assert bot.store.recent_jobs() == []
+    assert bot.store.recent_jobs(OWNER) == []
     say(bot, f"{LINK} 1000 0")
     assert all(o["kind"] == "views" for o in bot.store.job_orders(1))
 
@@ -143,14 +171,14 @@ def test_views_only_and_bad_input(bot):
 def test_same_link_twice_while_running_is_refused(bot):
     say(bot, f"{LINK} 5000 100")
     assert "still placing orders" in say(bot, f"https://twitter.com/someone/status/1866000000000000001 5000 100")
-    assert len(bot.store.recent_jobs()) == 1
+    assert len(bot.store.recent_jobs(OWNER)) == 1
 
 
 def test_redelivered_update_does_not_order_twice(bot):
-    update = {"update_id": 50, "message": {"text": LINK, "chat": {"id": OWNER}, "from": {"id": OWNER}}}
-    bot.handle_update(update)
-    bot.handle_update(update)
-    assert len(bot.tg.sent) == 1
+    again = update(bot, LINK, OWNER)
+    bot.handle_update(again)
+    bot.handle_update(again)
+    assert len(bot.store.recent_jobs(OWNER)) == 1
 
 
 def test_rejected_order_is_reported_and_can_be_retried(bot):
@@ -221,3 +249,97 @@ def test_status_balance_help(bot):
     assert "12.50 USD" in say(bot, "/balance")
     assert "/spread" in say(bot, "/help")
     assert "Unknown command" in say(bot, "/nope")
+
+
+# -- multi-user ---------------------------------------------------------------
+
+
+def add_member(bot, user=MEMBER, key=MEMBER_KEY):
+    say(bot, f"/adduser {user}")
+    say(bot, f"/setkey {key}", user=user)
+    return bot.panels[key]
+
+
+def test_setup_asks_for_key_then_deletes_the_message(bot):
+    say(bot, f"/adduser {MEMBER}")
+    assert "connect your panel account" in say(bot, LINK, user=MEMBER)       # no key yet: nothing ordered
+    assert "Send me your panel API key" in say(bot, "/setkey", user=MEMBER)
+    bot.tg.deleted.clear()
+    reply = say(bot, MEMBER_KEY, user=MEMBER)
+    assert "Key saved" in reply and "12.50 USD" in reply and MEMBER_KEY not in reply
+    assert bot.tg.deleted == [(MEMBER, 1000 + bot.counter)]
+    assert bot.store.api_key(MEMBER) == MEMBER_KEY
+    assert "Job #1 started" in say(bot, LINK, user=MEMBER)
+
+
+def test_rejected_key_is_not_saved(bot):
+    say(bot, f"/adduser {MEMBER}")
+    assert "did not accept that key" in say(bot, "/setkey bad-key-12345", user=MEMBER)
+    assert bot.store.api_key(MEMBER) is None
+    assert "does not look like an API key" in say(bot, "/setkey abc", user=MEMBER)
+
+
+def test_each_user_orders_with_their_own_key_and_settings(bot):
+    member_panel = add_member(bot)
+    say(bot, "/views 2000", user=MEMBER)
+    say(bot, f"{LINK} 0 100")                    # owner: explicit
+    say(bot, f"{LINK}", user=MEMBER)             # member: their defaults, same link is fine
+    bot.process_due()
+    assert bot.panel.orders == [("7", LINK, 100)]
+    assert ("7", LINK, 30) in member_panel.orders
+    member_views = [o for o in bot.store.job_orders(2) if o["kind"] == "views"]
+    assert sum(o["quantity"] for o in member_views) == 2000
+    assert bot.settings(OWNER).views == 1000
+
+
+def test_users_cannot_see_or_control_each_others_jobs(bot):
+    add_member(bot)
+    say(bot, f"{LINK} 5000 100")
+    assert "You have no job 1" in say(bot, "/status 1", user=MEMBER)
+    assert "You have no job 1" in say(bot, "/cancel 1", user=MEMBER)
+    assert "You have no job 1" in say(bot, "/retry 1", user=MEMBER)
+    assert "No jobs yet" in say(bot, "/status", user=MEMBER)
+    assert bot.store.job(1)["status"] == "active"
+
+
+def test_notifications_go_to_the_job_owner(bot):
+    member_panel = add_member(bot)
+    member_panel.fail_with = PanelRejected("Not enough funds on balance")
+    say(bot, f"{LINK} 0 100", user=MEMBER)
+    bot.tg.to.clear()
+    bot.process_due()
+    assert bot.tg.to and set(bot.tg.to) == {MEMBER}
+
+
+def test_only_admin_manages_users_and_limit_is_enforced(bot):
+    add_member(bot)
+    assert "Only the admin" in say(bot, "/adduser 333", user=MEMBER)
+    assert "Only the admin" in say(bot, "/users", user=MEMBER)
+    assert "333 added (3/3 users)" in say(bot, "/adduser 333")
+    assert "limit of 3 users is reached" in say(bot, "/adduser 444")
+    assert "already has access" in say(bot, "/adduser 333")
+    listing = say(bot, "/users")
+    assert "Users: 3/3" in listing and f"{OWNER} — admin, key set" in listing and "333 — member, no key yet" in listing
+    assert MEMBER_KEY not in listing
+
+
+def test_removing_a_user_deletes_key_and_cancels_their_queue(bot):
+    member_panel = add_member(bot)
+    say(bot, f"{LINK} 5000 100", user=MEMBER)
+    bot.process_due()
+    placed = len(member_panel.orders)
+    reply = say(bot, f"/removeuser {MEMBER}")
+    assert "removed" in reply and "API key deleted" in reply
+    bot.clock.now += 24 * 3600
+    bot.process_due()
+    assert len(member_panel.orders) == placed
+    assert bot.store.api_key(MEMBER) is None
+    assert "don't have access" in say(bot, LINK, user=MEMBER)
+    assert "cannot be removed" in say(bot, f"/removeuser {OWNER}")
+
+
+def test_group_chats_are_refused(bot):
+    bot.handle_update(update(bot, f"/setkey {OWNER_KEY}", OWNER, chat_type="group", chat_id=-500))
+    assert "private chat" in bot.tg.sent[-1]
+    bot.handle_update(update(bot, LINK, OWNER, chat_type="group", chat_id=-500))
+    assert bot.store.recent_jobs(OWNER) == []

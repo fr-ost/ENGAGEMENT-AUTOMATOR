@@ -21,7 +21,8 @@ def main() -> int:
         print(exc, file=sys.stderr)
         return 2
     store = Store(config.data_dir / "orderbot.sqlite3")
-    App(config, store, Panel(config.smm_api_url, config.smm_api_key), Telegram(config.telegram_token)).run_forever()
+    panel_for = lambda api_key: Panel(config.smm_api_url, api_key)  # noqa: E731
+    App(config, store, panel_for, Telegram(config.telegram_token)).run_forever()
     return 0
 
 
