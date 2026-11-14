@@ -220,12 +220,12 @@
       "created_at": "2026-11-09T04:56:41.000Z",
       "discovered_at": "2026-11-10T00:28:15Z",
       "kind": "original",
-      "metrics_updated_at": "2026-11-13T22:16:29Z",
+      "metrics_updated_at": "2026-11-14T20:03:59Z",
       "post_id": "2119655391898542564",
       "post_url": "https://x.com/0x_nation/status/2119655391898542564",
       "public_metrics": {
         "bookmark_count": 1,
-        "impression_count": 3835,
+        "impression_count": 3843,
         "like_count": 155,
         "quote_count": 0,
         "reply_count": 126,
@@ -238,19 +238,73 @@
       "created_at": "2026-11-12T15:20:48.000Z",
       "discovered_at": "2026-11-12T22:28:33Z",
       "kind": "quote",
-      "metrics_updated_at": "2026-11-13T22:16:29Z",
+      "metrics_updated_at": "2026-11-14T20:03:59Z",
       "post_id": "2120899621925130596",
       "post_url": "https://x.com/0x_nation/status/2120899621925130596",
       "public_metrics": {
         "bookmark_count": 0,
-        "impression_count": 4745,
-        "like_count": 87,
+        "impression_count": 4765,
+        "like_count": 88,
         "quote_count": 0,
         "reply_count": 119,
         "retweet_count": 0
       },
       "status": "PLANNED",
       "text": "Liquidity doesn't move just because an opportunity exists.\n\nA protocol can have attractive incentives, a well-designed vault and strong demand for capital. But without an effective distribution system, reaching the right liquidity providers becomes another challenge.\n\nThis is a https://t.co/5fJd6Qnm3v https://t.co/kHEIYHz0Le"
+    },
+    "2121459711057010883": {
+      "created_at": "2026-11-14T04:26:24.000Z",
+      "discovered_at": "2026-11-14T20:03:59Z",
+      "kind": "quote",
+      "metrics_updated_at": "2026-11-14T20:03:59Z",
+      "post_id": "2121459711057010883",
+      "post_url": "https://x.com/0x_nation/status/2121459711057010883",
+      "public_metrics": {
+        "bookmark_count": 2,
+        "impression_count": 5390,
+        "like_count": 104,
+        "quote_count": 0,
+        "reply_count": 133,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "Holding a Perp Position for Days Requires More Than Just a Good Entry.\n\nThe longer a trade stays open, the more attention funding and execution costs deserve.\n\n@grvt_io is preparing Stable Funding Perps, with a funding model built around daily settlement rather than the usual 1, https://t.co/Y0rl3A4y3c https://t.co/z3nOBiD29E"
+    },
+    "2121670609767899417": {
+      "created_at": "2026-11-14T18:24:26.000Z",
+      "discovered_at": "2026-11-14T20:03:59Z",
+      "kind": "quote",
+      "metrics_updated_at": "2026-11-14T20:03:59Z",
+      "post_id": "2121670609767899417",
+      "post_url": "https://x.com/0x_nation/status/2121670609767899417",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 906,
+        "like_count": 59,
+        "quote_count": 0,
+        "reply_count": 11,
+        "retweet_count": 1
+      },
+      "status": "PLANNED",
+      "text": "I'm on the BTC chart all day anyway, might as well put something weird on it 🤡\n\n200 USDT for the strangest stickers on @LBank_Exchange, random fun entries get 1 to 3 USDT\n\nDrop yours with #LBankBulletComment before it closes Nov 15 https://t.co/Uc7waiVepv"
+    },
+    "2121687944235020699": {
+      "created_at": "2026-11-14T19:33:19.000Z",
+      "discovered_at": "2026-11-14T20:03:59Z",
+      "kind": "original",
+      "metrics_updated_at": "2026-11-14T20:03:59Z",
+      "post_id": "2121687944235020699",
+      "post_url": "https://x.com/0x_nation/status/2121687944235020699",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 584,
+        "like_count": 57,
+        "quote_count": 0,
+        "reply_count": 8,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "gm\n\nI've been looking into what @strato_net is building, and one thing that caught my attention is how they're approaching tokenized gold and silver.\n\nUsually, when people talk about tokenized metals, the conversation stops at owning the asset.\n\nSTRATO is trying to take that a https://t.co/c3NNBvnCe0"
     }
   },
   "schema_version": 1

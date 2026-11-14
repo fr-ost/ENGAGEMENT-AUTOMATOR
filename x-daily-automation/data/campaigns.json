@@ -396,10 +396,10 @@
         "Auto-order failed (likes for post 2119655391898542564): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
       ],
       "performance": {
-        "impressions": 3835,
+        "impressions": 3843,
         "likes": 155,
         "source": "x_api_public_metrics",
-        "updated_at": "2026-11-13T22:16:29Z"
+        "updated_at": "2026-11-14T20:03:59Z"
       },
       "post_id": "2119655391898542564",
       "post_url": "https://x.com/0x_nation/status/2119655391898542564",
@@ -409,7 +409,7 @@
         "impressions": 1500,
         "likes": 50
       },
-      "updated_at": "2026-11-13T22:16:29Z"
+      "updated_at": "2026-11-14T20:03:59Z"
     },
     "2120899621925130596": {
       "authorized_campaigns": [],
@@ -420,10 +420,10 @@
         "Auto-order failed (likes for post 2120899621925130596): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
       ],
       "performance": {
-        "impressions": 4745,
-        "likes": 87,
+        "impressions": 4765,
+        "likes": 88,
         "source": "x_api_public_metrics",
-        "updated_at": "2026-11-13T22:16:29Z"
+        "updated_at": "2026-11-14T20:03:59Z"
       },
       "post_id": "2120899621925130596",
       "post_url": "https://x.com/0x_nation/status/2120899621925130596",
@@ -433,7 +433,181 @@
         "impressions": 1500,
         "likes": 50
       },
-      "updated_at": "2026-11-13T22:16:29Z"
+      "updated_at": "2026-11-14T20:03:59Z"
+    },
+    "2121459711057010883": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.003,
+            "currency": "USD",
+            "remains": 1500,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 1500,
+          "reference": "171802276",
+          "service_id": "14808",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.18525,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 50,
+          "reference": "171802277",
+          "service_id": "14318",
+          "type": "likes"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-11-14T20:03:59Z",
+      "errors": [],
+      "performance": {
+        "impressions": 5390,
+        "likes": 104,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-14T20:03:59Z"
+      },
+      "post_id": "2121459711057010883",
+      "post_url": "https://x.com/0x_nation/status/2121459711057010883",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-14T20:03:59Z"
+    },
+    "2121670609767899417": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.003,
+            "currency": "USD",
+            "remains": 1500,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 1500,
+          "reference": "171802278",
+          "service_id": "14808",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.18525,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 50,
+          "reference": "171802279",
+          "service_id": "14318",
+          "type": "likes"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-11-14T20:03:59Z",
+      "errors": [],
+      "performance": {
+        "impressions": 906,
+        "likes": 59,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-14T20:03:59Z"
+      },
+      "post_id": "2121670609767899417",
+      "post_url": "https://x.com/0x_nation/status/2121670609767899417",
+      "promotion_status": "CAMPAIGN_LINKED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-14T20:03:59Z"
+    },
+    "2121687944235020699": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.003,
+            "currency": "USD",
+            "remains": 1500,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 1500,
+          "reference": "171802280",
+          "service_id": "14808",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.18525,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 50,
+          "reference": "171802281",
+          "service_id": "14318",
+          "type": "likes"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-11-14T20:03:59Z",
+      "errors": [],
+      "performance": {
+        "impressions": 584,
+        "likes": 57,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-14T20:03:59Z"
+      },
+      "post_id": "2121687944235020699",
+      "post_url": "https://x.com/0x_nation/status/2121687944235020699",
+      "promotion_status": "CAMPAIGN_LINKED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-14T20:03:59Z"
     }
   },
   "schema_version": 1
