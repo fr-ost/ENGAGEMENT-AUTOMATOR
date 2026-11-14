@@ -1,8 +1,6 @@
 # ENG-AUTOMATOR
+Automated daily X (Twitter) post discovery and promotion management using Python, GitHub Actions, the official X API, and SMM panel (BulkFollows) API integration. Features include post URL extraction, duplicate prevention, campaign planning, API status checks, daily reports, and optional Telegram notifications.
 
-A Telegram bot that orders X (Twitter) views and likes from an SMM panel (BulkFollows) when you
-send it a post link. Views are split into several uneven orders spread over time; likes go as one
-order. Up to 10 team members can use it, each with their own panel API key.
+## Project
 
-The bot lives in [`telegram-order-bot/`](telegram-order-bot/README.md) — setup, commands and
-Railway deployment are described there.
+The bot lives in [`x-daily-automation/`](x-daily-automation/README.md); its workflow is [`.github/workflows/daily.yml`](.github/workflows/daily.yml). Start with the [setup guide](x-daily-automation/README.md).

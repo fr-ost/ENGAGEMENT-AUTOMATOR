@@ -1,0 +1,2 @@
+# Runtime dependency (the only one).
+requests>=2.31,<3

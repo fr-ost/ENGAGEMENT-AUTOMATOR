@@ -1,0 +1,21 @@
+# Secrets — never commit real credentials
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Runtime-only files
+data/.run.lock
+data/.*.tmp
+reports/*.tmp
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
