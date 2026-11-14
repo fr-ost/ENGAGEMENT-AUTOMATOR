@@ -274,15 +274,15 @@
       "created_at": "2026-11-14T18:24:26.000Z",
       "discovered_at": "2026-11-14T20:03:59Z",
       "kind": "quote",
-      "metrics_updated_at": "2026-11-14T20:03:59Z",
+      "metrics_updated_at": "2026-11-14T21:02:29Z",
       "post_id": "2121670609767899417",
       "post_url": "https://x.com/0x_nation/status/2121670609767899417",
       "public_metrics": {
         "bookmark_count": 0,
-        "impression_count": 906,
-        "like_count": 59,
+        "impression_count": 3006,
+        "like_count": 60,
         "quote_count": 0,
-        "reply_count": 11,
+        "reply_count": 12,
         "retweet_count": 1
       },
       "status": "PLANNED",
@@ -292,19 +292,55 @@
       "created_at": "2026-11-14T19:33:19.000Z",
       "discovered_at": "2026-11-14T20:03:59Z",
       "kind": "original",
-      "metrics_updated_at": "2026-11-14T20:03:59Z",
+      "metrics_updated_at": "2026-11-14T21:02:29Z",
       "post_id": "2121687944235020699",
       "post_url": "https://x.com/0x_nation/status/2121687944235020699",
       "public_metrics": {
         "bookmark_count": 0,
-        "impression_count": 584,
-        "like_count": 57,
+        "impression_count": 2531,
+        "like_count": 107,
         "quote_count": 0,
         "reply_count": 8,
         "retweet_count": 0
       },
       "status": "PLANNED",
       "text": "gm\n\nI've been looking into what @strato_net is building, and one thing that caught my attention is how they're approaching tokenized gold and silver.\n\nUsually, when people talk about tokenized metals, the conversation stops at owning the asset.\n\nSTRATO is trying to take that a https://t.co/c3NNBvnCe0"
+    },
+    "2121698573469577538": {
+      "created_at": "2026-11-14T20:15:33.000Z",
+      "discovered_at": "2026-11-14T21:02:29Z",
+      "kind": "original",
+      "metrics_updated_at": "2026-11-14T21:02:29Z",
+      "post_id": "2121698573469577538",
+      "post_url": "https://x.com/0x_nation/status/2121698573469577538",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 90,
+        "like_count": 4,
+        "quote_count": 0,
+        "reply_count": 4,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "gm\n\nI've looked at a few perp DEXs recently, and one thing gets annoying pretty quickly: every platform has its own positions, points and reward programs to keep track of.\n\n@atoma_fi is trying to solve that problem differently.\n\nYou deposit USDC into Atoma Index, and its https://t.co/KsoMesmjfk"
+    },
+    "2121710148788142371": {
+      "created_at": "2026-11-14T21:01:33.000Z",
+      "discovered_at": "2026-11-14T21:02:29Z",
+      "kind": "quote",
+      "metrics_updated_at": "2026-11-14T21:02:29Z",
+      "post_id": "2121710148788142371",
+      "post_url": "https://x.com/0x_nation/status/2121710148788142371",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 13,
+        "like_count": 0,
+        "quote_count": 0,
+        "reply_count": 0,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "I've had trading ideas that sounded great in my head, but actually turning them into a strategy was a different story.\n\nTake something as simple as buying gold when the dollar weakens, with a $200 limit per trade.\n\nYou need to turn that idea into rules, test it and figure out if https://t.co/dSUD5DeiBK https://t.co/73CdVBfb9L"
     }
   },
   "schema_version": 1
