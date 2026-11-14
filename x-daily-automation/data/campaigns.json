@@ -1,0 +1,614 @@
+{
+  "plans": {
+    "2114799244616089958": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-10-26T19:23:04Z",
+      "errors": [],
+      "performance": {
+        "impressions": 43,
+        "likes": 2,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-10-26T21:14:59Z"
+      },
+      "post_id": "2114799244616089958",
+      "post_url": "https://x.com/0x_nation/status/2114799244616089958",
+      "promotion_status": "NOT_STARTED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-10-26T21:14:59Z"
+    },
+    "2114800697594278093": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-10-26T19:26:10Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-12T22:28:33Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
+          "last_status": {
+            "charge": 0.0018,
+            "currency": "USD",
+            "remains": 0,
+            "start_count": 3,
+            "status": "Completed"
+          },
+          "provider": "smmsoc",
+          "quantity": 1500,
+          "reference": "789324",
+          "service_id": "3574",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-10-26T19:26:10Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-12T22:28:33Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
+          "last_status": {
+            "charge": 0.0,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": 0,
+            "status": "Canceled"
+          },
+          "provider": "smmsoc",
+          "quantity": 50,
+          "reference": "789325",
+          "service_id": "3481",
+          "type": "likes"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-10-26T19:26:10Z",
+      "errors": [],
+      "performance": {
+        "impressions": 1745,
+        "likes": 4,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-10-26T21:14:59Z"
+      },
+      "post_id": "2114800697594278093",
+      "post_url": "https://x.com/0x_nation/status/2114800697594278093",
+      "promotion_status": "CAMPAIGN_LINKED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-01T20:53:13Z"
+    },
+    "2115070089326178668": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-10-27T21:01:39Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-12T22:28:33Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
+          "last_status": {
+            "charge": 0.0018,
+            "currency": "USD",
+            "remains": 0,
+            "start_count": 1784,
+            "status": "Completed"
+          },
+          "provider": "smmsoc",
+          "quantity": 1500,
+          "reference": "792215",
+          "service_id": "3574",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-10-27T21:01:39Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-12T22:28:33Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
+          "last_status": {
+            "charge": 0.052835,
+            "currency": "USD",
+            "remains": 0,
+            "start_count": 37,
+            "status": "Completed"
+          },
+          "provider": "smmsoc",
+          "quantity": 50,
+          "reference": "792216",
+          "service_id": "3481",
+          "type": "likes"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-10-27T21:01:39Z",
+      "errors": [],
+      "performance": {
+        "impressions": 4495,
+        "likes": 133,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-02T23:43:05Z"
+      },
+      "post_id": "2115070089326178668",
+      "post_url": "https://x.com/0x_nation/status/2115070089326178668",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-02T23:43:05Z"
+    },
+    "2116409587977081187": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-10-31T20:20:34Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-12T22:28:33Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
+          "last_status": {
+            "charge": 0.0012,
+            "currency": "USD",
+            "remains": 0,
+            "start_count": 4236,
+            "status": "Completed"
+          },
+          "provider": "smmsoc",
+          "quantity": 1500,
+          "reference": "808011",
+          "service_id": "3574",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-10-31T20:20:34Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-12T22:28:33Z",
+          "last_error": "SMM API authentication failed: Invalid API key",
+          "last_status": {
+            "charge": 0.0,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": null,
+            "status": "Canceled"
+          },
+          "provider": "smmsoc",
+          "quantity": 50,
+          "reference": "808012",
+          "service_id": "3481",
+          "type": "likes"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-10-31T20:20:34Z",
+      "errors": [],
+      "performance": {
+        "impressions": 5226,
+        "likes": 58,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-06T21:48:13Z"
+      },
+      "post_id": "2116409587977081187",
+      "post_url": "https://x.com/0x_nation/status/2116409587977081187",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-06T21:48:13Z"
+    },
+    "2117263340749918380": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-02T23:43:05Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2117263340749918380): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2117263340749918380): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 2595,
+        "likes": 126,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-08T20:48:22Z"
+      },
+      "post_id": "2117263340749918380",
+      "post_url": "https://x.com/0x_nation/status/2117263340749918380",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-08T20:48:22Z"
+    },
+    "2117296564360355878": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-02T23:43:05Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2117296564360355878): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2117296564360355878): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 4714,
+        "likes": 502,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-08T20:48:22Z"
+      },
+      "post_id": "2117296564360355878",
+      "post_url": "https://x.com/0x_nation/status/2117296564360355878",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-08T20:48:22Z"
+    },
+    "2118063040134561800": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-04T22:16:37Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2118063040134561800): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2118063040134561800): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 1701,
+        "likes": 97,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-10T21:59:41Z"
+      },
+      "post_id": "2118063040134561800",
+      "post_url": "https://x.com/0x_nation/status/2118063040134561800",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-10T21:59:41Z"
+    },
+    "2118631765640400972": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-06T21:48:13Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2118631765640400972): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2118631765640400972): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 6492,
+        "likes": 125,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-12T22:28:33Z"
+      },
+      "post_id": "2118631765640400972",
+      "post_url": "https://x.com/0x_nation/status/2118631765640400972",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-12T22:28:33Z"
+    },
+    "2118761404702577063": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-06T21:48:13Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2118761404702577063): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2118761404702577063): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 4781,
+        "likes": 113,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-12T22:28:33Z"
+      },
+      "post_id": "2118761404702577063",
+      "post_url": "https://x.com/0x_nation/status/2118761404702577063",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-12T22:28:33Z"
+    },
+    "2118930785453654364": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-07T20:34:45Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2118930785453654364): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2118930785453654364): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 3964,
+        "likes": 128,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-13T22:16:29Z"
+      },
+      "post_id": "2118930785453654364",
+      "post_url": "https://x.com/0x_nation/status/2118930785453654364",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-13T22:16:29Z"
+    },
+    "2118945190799180167": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-07T20:34:45Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2118945190799180167): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2118945190799180167): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 6078,
+        "likes": 155,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-13T22:16:29Z"
+      },
+      "post_id": "2118945190799180167",
+      "post_url": "https://x.com/0x_nation/status/2118945190799180167",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-13T22:16:29Z"
+    },
+    "2118955644384608510": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-07T20:34:45Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2118955644384608510): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2118955644384608510): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 5787,
+        "likes": 133,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-13T22:16:29Z"
+      },
+      "post_id": "2118955644384608510",
+      "post_url": "https://x.com/0x_nation/status/2118955644384608510",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-13T22:16:29Z"
+    },
+    "2119655391898542564": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-10T00:28:15Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2119655391898542564): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2119655391898542564): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 3843,
+        "likes": 155,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-14T20:03:59Z"
+      },
+      "post_id": "2119655391898542564",
+      "post_url": "https://x.com/0x_nation/status/2119655391898542564",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-14T20:03:59Z"
+    },
+    "2120899621925130596": {
+      "authorized_campaigns": [],
+      "budget": null,
+      "created_at": "2026-11-12T22:28:33Z",
+      "errors": [
+        "Auto-order failed (impressions for post 2120899621925130596): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY.",
+        "Auto-order failed (likes for post 2120899621925130596): SMM API rejected the API key (HTTP 401). Check SMM_API_KEY."
+      ],
+      "performance": {
+        "impressions": 4765,
+        "likes": 88,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-14T20:03:59Z"
+      },
+      "post_id": "2120899621925130596",
+      "post_url": "https://x.com/0x_nation/status/2120899621925130596",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-14T20:03:59Z"
+    },
+    "2121459711057010883": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.003,
+            "currency": "USD",
+            "remains": 1500,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 1500,
+          "reference": "171802276",
+          "service_id": "14808",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.18525,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 50,
+          "reference": "171802277",
+          "service_id": "14318",
+          "type": "likes"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-11-14T20:03:59Z",
+      "errors": [],
+      "performance": {
+        "impressions": 5390,
+        "likes": 104,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-14T20:03:59Z"
+      },
+      "post_id": "2121459711057010883",
+      "post_url": "https://x.com/0x_nation/status/2121459711057010883",
+      "promotion_status": "TARGETS_REACHED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-14T20:03:59Z"
+    },
+    "2121670609767899417": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.003,
+            "currency": "USD",
+            "remains": 1500,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 1500,
+          "reference": "171802278",
+          "service_id": "14808",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.18525,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 50,
+          "reference": "171802279",
+          "service_id": "14318",
+          "type": "likes"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-11-14T20:03:59Z",
+      "errors": [],
+      "performance": {
+        "impressions": 906,
+        "likes": 59,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-14T20:03:59Z"
+      },
+      "post_id": "2121670609767899417",
+      "post_url": "https://x.com/0x_nation/status/2121670609767899417",
+      "promotion_status": "CAMPAIGN_LINKED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-14T20:03:59Z"
+    },
+    "2121687944235020699": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.003,
+            "currency": "USD",
+            "remains": 1500,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 1500,
+          "reference": "171802280",
+          "service_id": "14808",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-14T20:03:59Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-14T20:03:59Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.18525,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 50,
+          "reference": "171802281",
+          "service_id": "14318",
+          "type": "likes"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-11-14T20:03:59Z",
+      "errors": [],
+      "performance": {
+        "impressions": 584,
+        "likes": 57,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-14T20:03:59Z"
+      },
+      "post_id": "2121687944235020699",
+      "post_url": "https://x.com/0x_nation/status/2121687944235020699",
+      "promotion_status": "CAMPAIGN_LINKED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 1500,
+        "likes": 50
+      },
+      "updated_at": "2026-11-14T20:03:59Z"
+    }
+  },
+  "schema_version": 1
+}
