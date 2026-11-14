@@ -32,6 +32,8 @@ class ScanResult:
     user_id: str
     username: str
     window_start: datetime
+    since_id: Optional[str] = None  # set when the scan asked only for posts newer than this ID
+    newest_post_id: Optional[str] = None  # highest post ID the timeline returned, filtered or not
     posts: list[Post] = field(default_factory=list)  # oldest first
     pages_fetched: int = 0
     truncated: bool = False
@@ -105,16 +107,32 @@ class Scanner:
         user = self._client.get_user_by_username(cfg.x_username)  # type: ignore[arg-type]
         return user["id"], user["username"]
 
-    def scan(self, account_cache: Optional[dict[str, Any]], last_successful_scan: Optional[str], now: datetime) -> ScanResult:
+    def scan(
+        self,
+        account_cache: Optional[dict[str, Any]],
+        last_successful_scan: Optional[str],
+        now: datetime,
+        since_id: Optional[str] = None,
+    ) -> ScanResult:
+        """Scan for new posts.
+
+        With since_id, ask X only for posts newer than that ID: each post is read
+        once however often the bot runs. Without it, scan the overlapping time
+        window (first run, manual recovery, and the periodic safety rescan).
+        """
         user_id, username = self.resolve_account(account_cache)
         window_start = compute_window_start(last_successful_scan, now, self._config)
         if window_start >= now:
             raise ScanError(f"Scan window start {format_iso(window_start)} is not in the past")
-        log.info("Scanning posts by user %s since %s", user_id, format_iso(window_start))
+        if since_id:
+            log.info("Scanning posts by user %s newer than post %s", user_id, since_id)
+        else:
+            log.info("Scanning posts by user %s since %s", user_id, format_iso(window_start))
 
         page = self._client.get_user_posts(
             user_id,
-            start_time=window_start,
+            start_time=None if since_id else window_start,
+            since_id=since_id,
             max_pages=self._config.x_max_pages,
             page_size=self._config.x_page_size,
         )
@@ -130,6 +148,7 @@ class Scanner:
             user_id=user_id,
             username=username,
             window_start=window_start,
+            since_id=since_id,
             pages_fetched=page.pages_fetched,
             truncated=page.truncated,
         )
@@ -139,6 +158,8 @@ class Scanner:
             if not (isinstance(post_id, str) and post_id.isdigit() and isinstance(created, str)):
                 result.invalid_items += 1
                 continue
+            if result.newest_post_id is None or int(post_id) > int(result.newest_post_id):
+                result.newest_post_id = post_id
             try:
                 parse_iso_datetime(created)
             except ValueError:

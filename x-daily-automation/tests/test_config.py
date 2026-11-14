@@ -17,6 +17,7 @@ def test_defaults():
     assert cfg.impression_target == 1000 and cfg.like_target == 30
     assert cfg.include_quote_posts is True
     assert cfg.smm_enabled is False and cfg.telegram_enabled is False
+    assert cfg.metrics_lookback_days == 0  # metrics refresh costs post reads; off unless asked for
 
 
 def test_smm_defaults_to_bulkfollows_and_derives_provider():

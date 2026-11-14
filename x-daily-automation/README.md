@@ -1,13 +1,13 @@
 # X Daily Automation
 
-A small Python bot that runs once a day on **GitHub Actions** at **11:00 PM Bangladesh time (17:00 UTC)**. It:
+A small Python bot that runs **every 2 hours** on **GitHub Actions**. It:
 
 1. finds your new X posts with the **official X API v2** (no scraping),
 2. deduplicates them by post ID and saves them to JSON files in this repo,
 3. creates a **promotion-planning record** for each new post (default target: 1,000 impressions and 30 likes),
-4. tracks progress using X's own public metrics,
+4. optionally tracks progress using X's public metrics (off by default, because it costs extra post reads),
 5. optionally talks to an **SMM panel** (default: [BulkFollows](https://bulkfollows.com/api)): reads your balance and service metadata, and, if you turn on `SMM_AUTO_ORDER`, places an impressions order and a likes order for each new post and tracks their status,
-6. writes a daily Markdown report to `reports/` and optionally sends it to **Telegram**.
+6. writes a Markdown report to `reports/` (one file per day, updated each run) and optionally messages **Telegram** when it finds new posts or a run fails.
 
 > **Spending money is opt-in.** With the defaults the bot places no orders; targets are planning goals only. Orders are placed only when both `SMM_ENABLED=true` and `SMM_AUTO_ORDER=true`. See [step 5](#5-configure-the-smm-panel-optional).
 
@@ -37,21 +37,23 @@ A small Python bot that runs once a day on **GitHub Actions** at **11:00 PM Bang
 ## How it works
 
 ```
-GitHub Actions (17:00 UTC daily or manual)
+GitHub Actions (every 2 hours, or manual)
   └─ pytest (offline, mocked)        ← the bot does not run if tests fail
   └─ python main.py
        1. load + validate config     (exit 2 on bad config)
        2. lock + load JSON state     (exit 3 if corrupt or locked; nothing is reset)
-       3. X API: user timeline since (last checkpoint − 2h overlap)
+       3. X API: user timeline, only posts newer than the last one seen
        4. dedupe by post ID → save new posts + planning records
-       5. refresh public metrics for posts from the last 7 days
+       5. refresh public metrics (only if METRICS_LOOKBACK_DAYS > 0)
        6. SMM panel checks + auto-orders (optional; failures are only warnings)
        7. save state; the checkpoint is written LAST and only after a complete scan
        8. write reports/YYYY-MM-DD.md, then send Telegram (optional; failures never fail the run)
   └─ commit data/ + reports/ (only if changed; rebase on conflict, never force-push)
 ```
 
-**Checkpoint safety.** `data/state.json` → `last_successful_scan_at` moves forward only when the whole scan succeeded **and** the posts/plans were written to disk. If the scan fails, is cut short, or saving fails, the previous checkpoint stays and the next run covers the gap. Because every scan overlaps the previous one by `SCAN_OVERLAP_HOURS`, posts that X indexes late are still found, and the duplicates this causes are dropped by post ID. Running the bot twice in a row is therefore harmless.
+**Checkpoint safety.** `data/state.json` → `last_successful_scan_at` moves forward only when the whole scan succeeded **and** the posts/plans were written to disk. If the scan fails, is cut short, or saving fails, the previous checkpoint stays and the next run covers the gap. Running the bot twice in a row is harmless: known posts are dropped by post ID.
+
+**Each post is read once.** Normal scans ask X only for posts newer than the newest one already seen (`last_seen_post_id` in `data/state.json`), so a scan that finds nothing reads no posts, and scanning more often does not read more. Once every 24 hours one scan instead re-checks a time window going back `SCAN_OVERLAP_HOURS` before the previous scan, to catch a post X indexed late; that re-reads the few posts in that window. The first run and `scan_since` recovery runs also use a time window.
 
 **Overlapping runs.** The workflow uses a `concurrency` group, so only one run happens at a time. Local runs also take a lock file, `data/.run.lock`.
 
@@ -203,7 +205,7 @@ Each run then fetches the read-only status and the provider-reported charge, whi
    - *Workflow permissions*: the workflow requests `contents: write` itself. If your organization forces read-only tokens, select **Read and write permissions** so the bot can commit `data/` and `reports/`.
 3. Make sure the workflow file is on the **default branch**. Schedules only fire from there.
 
-**About timing:** GitHub runs scheduled workflows on a best-effort basis. Runs often start a few minutes, and sometimes 30+ minutes, after 17:00 UTC. During heavy load a run can occasionally be skipped. On public repos, GitHub automatically disables scheduled workflows after 60 days without repository activity, and the bot's own commits count as activity. The overlapping scan window and the saved checkpoint mean a late or skipped run never loses posts. The next run picks them up.
+**About timing:** GitHub runs scheduled workflows on a best-effort basis. Runs often start a few minutes, and sometimes 30+ minutes, after the scheduled time (minute 17 of every second hour, UTC). During heavy load a run can occasionally be skipped. On public repos, GitHub automatically disables scheduled workflows after 60 days without repository activity, and the bot's own commits count as activity. The saved last-seen post means a late or skipped run never loses posts. The next run picks them up.
 
 ## 7. Run the workflow manually
 
@@ -272,7 +274,7 @@ For more detail, set the variable `LOG_LEVEL=DEBUG`.
 
 | Item | Cost |
 | --- | --- |
-| GitHub Actions | Public repos: free for standard runners. Private repos: covered by your plan's included minutes; GitHub Free currently includes 2,000 minutes per month. Each run takes about 1 minute, so roughly 30 minutes per month. |
+| GitHub Actions | Public repos: free for standard runners. Private repos: covered by your plan's included minutes; GitHub Free currently includes 2,000 minutes per month. Each run takes about 1 minute, so 12 runs a day is roughly 360 minutes per month. |
 | Storage | JSON and Markdown in git: a few KB per day. |
 | Telegram | Free. |
 | X API | **Depends on your developer plan. Check it yourself.** X's tiers and prices have changed repeatedly, and this project does not assume any reads are free. |
@@ -280,11 +282,11 @@ For more detail, set the variable `LOG_LEVEL=DEBUG`.
 
 **X API usage per day** (typical):
 
-- 1 timeline request (plus 1 more per extra 100 posts)
-- 1 metrics lookup request for posts from the last `METRICS_LOOKBACK_DAYS` (up to 100 posts per request; set to `0` to disable)
+- 12 timeline requests, one per scan
 - 1 user lookup, on the first run only
+- posts read: each new post once, plus the few posts inside the once-a-day safety window
 
-That is about **2 requests per day, around 60 per month**. Posts read per day are roughly: new posts, plus posts in the 2-hour overlap, plus the recent posts whose metrics are refreshed. Every report lists the exact request and post-read counts. To have reports estimate a dollar cost, set `X_COST_PER_REQUEST_USD` and/or `X_COST_PER_POST_READ_USD` using prices **you have confirmed for your plan**. Otherwise the report says the cost is unknown.
+On per-post-read pricing the cost therefore follows how much you post, not how often the bot scans. Whether a request that returns no posts is billed depends on your X plan; check your developer console after the first day. Setting `METRICS_LOOKBACK_DAYS` above `0` adds one lookup per run that re-reads every post that recent, 12 times a day. Every report lists the exact request and post-read counts. To have reports estimate a dollar cost, set `X_COST_PER_REQUEST_USD` and/or `X_COST_PER_POST_READ_USD` using prices **you have confirmed for your plan**. Otherwise the report says the cost is unknown.
 
 ---
 
@@ -307,9 +309,9 @@ Long reports are split into several messages under Telegram's 4,096-character li
 | `INCLUDE_QUOTE_POSTS` | `true` | Include quote posts. Replies and reposts are always excluded. |
 | `X_PAGE_SIZE` | `100` | Posts per page (5–100). |
 | `X_MAX_PAGES` | `5` | Page cap per scan; hitting it marks the scan INCOMPLETE. |
-| `SCAN_OVERLAP_HOURS` | `2` | Overlap with the previous checkpoint. |
+| `SCAN_OVERLAP_HOURS` | `2` | How far the once-a-day safety scan reaches back before the previous scan. |
 | `INITIAL_LOOKBACK_HOURS` | `24` | First-run window. |
-| `METRICS_LOOKBACK_DAYS` | `7` | Refresh metrics for posts this recent (`0` = off). |
+| `METRICS_LOOKBACK_DAYS` | `0` | Refresh metrics for posts this recent on every run. Off by default; costs post reads. |
 | `SCAN_SINCE` | — | Recovery: scan from this UTC ISO time. |
 | `ALLOW_STATE_REINIT` | `false` | Recovery: quarantine invalid state files. |
 | `DRY_RUN` | `false` | Save nothing, send nothing, print the report. |
@@ -320,7 +322,7 @@ Long reports are split into several messages under Telegram's 4,096-character li
 | `SMM_API_URL` | `https://bulkfollows.com/api/v2` | Set only to use another v2-compatible panel. |
 | `SMM_API_KEY` | — | **Secret.** |
 | `SMM_IMPRESSION_SERVICE_ID` / `SMM_LIKE_SERVICE_ID` | — | Panel service IDs used for metadata and auto-orders. |
-| `TELEGRAM_ENABLED` | `false` | Send the daily summary. |
+| `TELEGRAM_ENABLED` | `false` | Message when a run finds new posts or fails. |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | — | **Secrets.** |
 | `X_COST_PER_REQUEST_USD` / `X_COST_PER_POST_READ_USD` | — | Your verified prices, for cost estimates. |
 | `HTTP_TIMEOUT_SECONDS` | `20` | Per-request timeout. |

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from src.campaign_manager import (
@@ -24,7 +24,16 @@ from src.campaign_manager import (
     refresh_campaign_statuses,
     tracked_post_ids,
 )
-from src.config import PROJECT_ROOT, Config, ConfigError, format_iso, load_config, load_dotenv, setup_logging
+from src.config import (
+    PROJECT_ROOT,
+    Config,
+    ConfigError,
+    format_iso,
+    load_config,
+    load_dotenv,
+    parse_iso_datetime,
+    setup_logging,
+)
 from src.deduplication import deduplicate
 from src.reporter import RunSummary, render_markdown, render_telegram, write_report
 from src.scanner import Scanner, ScanError
@@ -34,6 +43,22 @@ from src.telegram import TelegramError, TelegramNotifier
 from src.x_client import XAPIError, XAuthError, XClient
 
 log = logging.getLogger("x_daily")
+
+# Normal scans ask only for posts newer than the last one seen. This often, a scan
+# re-reads the overlap window instead, to catch a post X indexed late.
+WINDOW_RESCAN_INTERVAL = timedelta(hours=24)
+
+
+def _since_id(state: dict[str, Any], config: Config, now: datetime) -> Optional[str]:
+    last_seen, last_window_scan = state.get("last_seen_post_id"), state.get("last_window_scan_at")
+    if not (isinstance(last_seen, str) and last_seen.isdigit()) or config.scan_since_override:
+        return None
+    try:
+        if not last_window_scan or now - parse_iso_datetime(last_window_scan) >= WINDOW_RESCAN_INTERVAL:
+            return None
+    except (TypeError, ValueError):
+        return None
+    return last_seen
 
 
 def _now() -> datetime:
@@ -91,7 +116,11 @@ def _run_locked(
     scan_ids: set[str] = set()
     new_posts: list = []
     try:
-        result = Scanner(x_client, config).scan(state.get("account"), state.get("last_successful_scan_at"), now)
+        since_id = _since_id(state, config, now)
+        result = Scanner(x_client, config).scan(
+            state.get("account"), state.get("last_successful_scan_at"), now, since_id=since_id
+        )
+        summary.since_id = since_id
         summary.username = result.username
         summary.window_start = format_iso(result.window_start)
         summary.pages_fetched = result.pages_fetched
@@ -121,6 +150,11 @@ def _run_locked(
         else:
             summary.scan_status = "SUCCESS"
             scan_ok = True
+            newest = max(int(result.newest_post_id or 0), int(state.get("last_seen_post_id") or 0))
+            if newest:
+                state["last_seen_post_id"] = str(newest)
+            if since_id is None:
+                state["last_window_scan_at"] = format_iso(now)
         if result.invalid_items:
             summary.warnings.append(f"Ignored {result.invalid_items} malformed post object(s) from the X API")
     except XAuthError as exc:
@@ -181,7 +215,11 @@ def _run_locked(
         path = write_report(config.reports_dir, summary, markdown)
         log.info("Report written to %s", path)
 
-    if config.telegram_enabled and not config.dry_run:
+    worth_a_message = bool(summary.new_posts or summary.errors or summary.scan_status != "SUCCESS")
+    if config.telegram_enabled and not config.dry_run and not worth_a_message:
+        summary.telegram_status = "not sent (nothing new)"
+        write_report(config.reports_dir, summary, render_markdown(summary, config, posts, plans))
+    elif config.telegram_enabled and not config.dry_run:
         try:
             notifier = notifier or TelegramNotifier(
                 config.telegram_bot_token,  # type: ignore[arg-type]

@@ -78,12 +78,82 @@ def test_rerun_is_idempotent_with_overlapping_window(mocked, make_config):
     assert state["last_run"]["new_posts"] == 0
     assert state["last_run"]["duplicates_skipped"] == 2
     assert len(state["run_history"]) == 2
-    # Second scan starts at the previous checkpoint minus the 2h overlap.
+    # Second scan asks only for posts newer than the newest one already seen.
     second_timeline = [c for c in mocked.calls if "/tweets" in c.request.url][-1]
-    assert second_timeline.request.params["start_time"] == "2026-10-26T15:00:00Z"
+    assert second_timeline.request.params["since_id"] == "1866000000000000002"
+    assert "start_time" not in second_timeline.request.params
+    assert "posts newer than ID 1866000000000000002" in report(cfg)
     # Account was cached, so the username lookup happened only once.
     assert sum("by/username" in c.request.url for c in mocked.calls) == 1
     assert "New posts this run: 0" in report(cfg)
+
+
+def test_frequent_scans_read_each_post_once_with_a_daily_window_rescan(mocked, make_config):
+    cfg = make_config()
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body(TWO_POSTS))
+    x = client()
+    assert main.run(cfg, now=NOW, x_client=x) == 0
+    assert x.posts_read == 2
+
+    # Every 2 hours with nothing new: no posts are read at all.
+    mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
+    for hours in (2, 4, 6):
+        x = client()
+        assert main.run(cfg, now=NOW + timedelta(hours=hours), x_client=x) == 0
+        assert x.posts_read == 0
+    assert read(cfg, "state.json")["last_seen_post_id"] == "1866000000000000002"
+    assert read(cfg, "state.json")["last_successful_scan_at"] == "2026-10-26T23:00:00Z"
+
+    # A new post is picked up by the next scan and becomes the new marker.
+    mocked.replace("GET", TIMELINE_URL, json=timeline_body([raw_post("1866000000000000009", "2026-10-27T00:30:00Z")]))
+    assert main.run(cfg, now=NOW + timedelta(hours=8), x_client=client()) == 0
+    assert read(cfg, "state.json")["last_seen_post_id"] == "1866000000000000009"
+    assert len(read(cfg, "posts.json")["posts"]) == 3
+
+    # Once 24h have passed since the last window scan, one scan re-checks the overlap window.
+    mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
+    assert main.run(cfg, now=NOW + timedelta(hours=24), x_client=client()) == 0
+    params = [c for c in mocked.calls if "/tweets" in c.request.url][-1].request.params
+    assert params["start_time"] == "2026-10-26T23:00:00Z" and "since_id" not in params  # last scan (01:00) minus 2h
+    assert main.run(cfg, now=NOW + timedelta(hours=26), x_client=client()) == 0
+    params = [c for c in mocked.calls if "/tweets" in c.request.url][-1].request.params
+    assert params["since_id"] == "1866000000000000009"
+
+
+def test_failed_scan_does_not_move_the_last_seen_marker(mocked, make_config):
+    cfg = make_config()
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body(TWO_POSTS))
+    assert main.run(cfg, now=NOW, x_client=client()) == 0
+    mocked.replace("GET", TIMELINE_URL, status=503)
+    assert main.run(cfg, now=NOW + timedelta(hours=2), x_client=client()) == 1
+    assert read(cfg, "state.json")["last_seen_post_id"] == "1866000000000000002"
+
+
+def test_manual_recovery_scan_uses_the_time_window(mocked, make_config):
+    cfg = make_config()
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body(TWO_POSTS))
+    assert main.run(cfg, now=NOW, x_client=client()) == 0
+    recovery = make_config(SCAN_SINCE="2026-10-20T00:00:00Z")
+    assert main.run(recovery, now=NOW + timedelta(hours=2), x_client=client()) == 0
+    params = [c for c in mocked.calls if "/tweets" in c.request.url][-1].request.params
+    assert params["start_time"] == "2026-10-20T00:00:00Z" and "since_id" not in params
+
+
+def test_telegram_is_silent_when_nothing_is_new(mocked, make_config):
+    cfg = make_config(TELEGRAM_ENABLED="true", TELEGRAM_BOT_TOKEN=TG_TOKEN, TELEGRAM_CHAT_ID="42")
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json={"meta": {"result_count": 0}})
+    mocked.post(TG_URL, json={"ok": True})
+    assert main.run(cfg, now=NOW, x_client=client()) == 0
+    assert not [c for c in mocked.calls if "telegram" in c.request.url]
+    assert "Telegram | not sent (nothing new)" in report(cfg)
+
+    mocked.replace("GET", TIMELINE_URL, status=503)   # a failed scan still notifies
+    assert main.run(cfg, now=NOW + timedelta(hours=2), x_client=client()) == 1
+    assert len([c for c in mocked.calls if "telegram" in c.request.url]) == 1
 
 
 def test_new_post_on_next_day_is_added(mocked, make_config):

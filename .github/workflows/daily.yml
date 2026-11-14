@@ -2,9 +2,9 @@ name: X daily automation
 
 on:
   schedule:
-    # 17:00 UTC = 23:00 Bangladesh time (UTC+6). GitHub may start scheduled
-    # runs late (often 5-30+ minutes) under load; runs are not guaranteed exact.
-    - cron: "0 17 * * *"
+    # Every 2 hours. Off the top of the hour, where GitHub's scheduler is busiest;
+    # runs can still start late (often 5-30+ minutes) and are not guaranteed exact.
+    - cron: "17 */2 * * *"
   workflow_dispatch:
     inputs:
       scan_since:

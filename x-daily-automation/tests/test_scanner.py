@@ -49,6 +49,16 @@ def test_timeline_request_excludes_replies_and_reposts(mocked, x_client, make_co
     assert "public_metrics" in params["tweet.fields"]
 
 
+def test_since_id_scan_asks_only_for_newer_posts(mocked, x_client, make_config):
+    mocked.get(TIMELINE_URL, json=timeline_body([raw_post("205", refs=["quoted"]), raw_post("203")]))
+    result = Scanner(x_client, make_config(INCLUDE_QUOTE_POSTS="false")).scan(CACHED, "2026-10-26T15:00:00Z", NOW, since_id="200")
+    params = mocked.calls[0].request.params
+    assert params["since_id"] == "200" and "start_time" not in params
+    assert [p.post_id for p in result.posts] == ["203"]
+    assert result.newest_post_id == "205"      # a filtered-out post still advances the marker
+    assert result.since_id == "200"
+
+
 def test_quote_posts_can_be_excluded(mocked, x_client, make_config):
     mocked.get(TIMELINE_URL, json=timeline_body([raw_post("2", refs=["quoted"]), raw_post("1")]))
     result = Scanner(x_client, make_config(INCLUDE_QUOTE_POSTS="false")).scan(CACHED, None, NOW)

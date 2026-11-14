@@ -38,7 +38,7 @@ class Config:
     initial_lookback_hours: int = 24
     scan_overlap_hours: int = 2
     scan_since_override: Optional[datetime] = None
-    metrics_lookback_days: int = 7
+    metrics_lookback_days: int = 0  # off by default: every refresh re-reads (and pays for) old posts
 
     # HTTP behaviour shared by all clients
     http_timeout_seconds: float = 20.0
@@ -207,7 +207,7 @@ def load_config(env: Optional[Mapping[str, str]] = None) -> Config:
             x_max_pages=_int(env, "X_MAX_PAGES", 5, 1, 50),
             initial_lookback_hours=_int(env, "INITIAL_LOOKBACK_HOURS", 24, 1, 24 * 30),
             scan_overlap_hours=_int(env, "SCAN_OVERLAP_HOURS", 2, 0, 72),
-            metrics_lookback_days=_int(env, "METRICS_LOOKBACK_DAYS", 7, 0, 90),
+            metrics_lookback_days=_int(env, "METRICS_LOOKBACK_DAYS", 0, 0, 90),
             http_timeout_seconds=float(_int(env, "HTTP_TIMEOUT_SECONDS", 20, 1, 120)),
             http_max_retries=_int(env, "HTTP_MAX_RETRIES", 3, 0, 10),
             max_rate_limit_wait_seconds=_int(env, "MAX_RATE_LIMIT_WAIT_SECONDS", 120, 0, 900),

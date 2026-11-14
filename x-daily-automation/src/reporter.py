@@ -19,6 +19,7 @@ class RunSummary:
     first_run: bool = False
     username: Optional[str] = None
     window_start: Optional[str] = None
+    since_id: Optional[str] = None
     previous_checkpoint: Optional[str] = None
     new_checkpoint: Optional[str] = None
     checkpoint_advanced: bool = False
@@ -104,7 +105,7 @@ def render_markdown(summary: RunSummary, config: Config, posts: dict[str, Any], 
         f"| Run started | {started_bd} |",
         f"| Account | @{summary.username or '?'} |",
         f"| Scan status | **{summary.scan_status}** |",
-        f"| Scan window start | {_bd(summary.window_start)} |",
+        f"| Scanned | {'posts newer than ID ' + summary.since_id if summary.since_id else 'posts since ' + _bd(summary.window_start)} |",
         f"| Previous checkpoint | {_bd(summary.previous_checkpoint)} |",
         f"| Checkpoint advanced | {'yes → ' + _bd(summary.new_checkpoint) if summary.checkpoint_advanced else 'no'} |",
         f"| State persisted | {'yes' if summary.persisted else 'no'} |",

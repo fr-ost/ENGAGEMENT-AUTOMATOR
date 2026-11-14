@@ -181,20 +181,31 @@ class XClient:
     def get_user_posts(
         self,
         user_id: str,
-        start_time: datetime,
+        start_time: Optional[datetime] = None,
         max_pages: int = 5,
         page_size: int = 100,
         exclude: tuple[str, ...] = ("replies", "retweets"),
+        since_id: Optional[str] = None,
     ) -> TimelinePage:
-        """Fetch the user's posts created at or after start_time, newest first."""
+        """Fetch the user's posts, newest first.
+
+        With since_id, only posts newer than that ID are returned, so a scan that
+        finds nothing reads (and is billed for) no posts. Otherwise posts created
+        at or after start_time are returned.
+        """
+        if since_id is None and start_time is None:
+            raise ValueError("since_id or start_time is required")
         result = TimelinePage()
         params: dict[str, Any] = {
             "max_results": page_size,
-            "start_time": format_iso(start_time),
             "tweet.fields": TWEET_FIELDS,
             "expansions": "author_id",
             "user.fields": "username",
         }
+        if since_id is not None:
+            params["since_id"] = since_id
+        else:
+            params["start_time"] = format_iso(start_time)  # type: ignore[arg-type]
         if exclude:
             params["exclude"] = ",".join(exclude)
 
