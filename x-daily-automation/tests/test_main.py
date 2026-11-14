@@ -359,8 +359,11 @@ def test_hourly_runs_scan_every_two_hours_and_drip_views_over_twelve_hours(mocke
     placed = _fake_panel(mocked)
 
     def run_at(hours):
+        """Run once and return how many X API requests that run made."""
         smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
-        assert main.run(cfg, now=NOW + timedelta(hours=hours), x_client=client(), smm_client=smm) == 0
+        x = client()
+        assert main.run(cfg, now=NOW + timedelta(hours=hours), x_client=x, smm_client=smm) == 0
+        return x.request_count
 
     def timeline_calls():
         return sum("/tweets" in c.request.url for c in mocked.calls)
@@ -383,13 +386,17 @@ def test_hourly_runs_scan_every_two_hours_and_drip_views_over_twelve_hours(mocke
     scans_after_discovery = timeline_calls()
 
     # One hour later: too soon to scan X again, but a view order is due.
-    run_at(1)
+    x_calls_before = sum("api.x.com" in c.request.url for c in mocked.calls)
+    assert run_at(1) == 0                                                 # not a single X API request
+    assert sum("api.x.com" in c.request.url for c in mocked.calls) == x_calls_before
+    assert "| X API requests | 0 |" in report(cfg, "2026-10-27")
     assert timeline_calls() == scans_after_discovery
     assert read(cfg, "state.json")["last_successful_scan_at"] == "2026-10-26T17:00:00Z"
     assert "No scan this run" in report(cfg, "2026-10-27")
 
-    for hour in range(2, 14):
-        run_at(hour)
+    x_requests = {hour: run_at(hour) for hour in range(2, 14)}
+    assert all(x_requests[hour] == 0 for hour in (3, 5, 7, 9, 11, 13))    # order-only runs never touch X
+    assert all(x_requests[hour] == 1 for hour in (2, 4, 6, 8, 10, 12))    # scan runs: one request, no posts read
     views = [o[2] for o in placed if o[0] == "5"]
     assert sum(views) == 5000 and len(views) == len(schedule)             # the whole total, in parts
     assert len([o for o in placed if o[0] == "7"]) == 1                   # likes never repeated
