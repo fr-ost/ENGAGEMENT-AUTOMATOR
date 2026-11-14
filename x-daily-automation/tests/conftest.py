@@ -29,6 +29,7 @@ def env(tmp_path):
         "DATA_DIR": str(tmp_path / "data"),
         "REPORTS_DIR": str(tmp_path / "reports"),
         "METRICS_LOOKBACK_DAYS": "0",
+        "SCAN_INTERVAL_HOURS": "0",  # tests rerun minutes apart; scan every time unless a test says otherwise
     }
 
 

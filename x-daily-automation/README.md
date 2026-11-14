@@ -1,12 +1,12 @@
 # X Daily Automation
 
-A small Python bot that runs **every 2 hours** on **GitHub Actions**. It:
+A small Python bot that runs **every hour** on **GitHub Actions** and scans X **every 2 hours**. It:
 
 1. finds your new X posts with the **official X API v2** (no scraping),
 2. deduplicates them by post ID and saves them to JSON files in this repo,
 3. creates a **promotion-planning record** for each new post (default target: 1,000 impressions and 30 likes),
 4. optionally tracks progress using X's public metrics (off by default, because it costs extra post reads),
-5. optionally talks to an **SMM panel** (default: [BulkFollows](https://bulkfollows.com/api)): reads your balance and service metadata, and, if you turn on `SMM_AUTO_ORDER`, places an impressions order and a likes order for each new post and tracks their status,
+5. optionally talks to an **SMM panel** (default: [BulkFollows](https://bulkfollows.com/api)): reads your balance and service metadata, and, if you turn on `SMM_AUTO_ORDER`, orders likes for each new post in one go and views as 10–12 smaller orders spread over 12 hours, and tracks their status,
 6. writes a Markdown report to `reports/` (one file per day, updated each run) and optionally messages **Telegram** when it finds new posts or a run fails.
 
 > **Spending money is opt-in.** With the defaults the bot places no orders; targets are planning goals only. Orders are placed only when both `SMM_ENABLED=true` and `SMM_AUTO_ORDER=true`. See [step 5](#5-configure-the-smm-panel-optional).
@@ -37,12 +37,13 @@ A small Python bot that runs **every 2 hours** on **GitHub Actions**. It:
 ## How it works
 
 ```
-GitHub Actions (every 2 hours, or manual)
+GitHub Actions (hourly, or manual)
   └─ pytest (offline, mocked)        ← the bot does not run if tests fail
   └─ python main.py
        1. load + validate config     (exit 2 on bad config)
        2. lock + load JSON state     (exit 3 if corrupt or locked; nothing is reset)
        3. X API: user timeline, only posts newer than the last one seen
+          (skipped if the last scan was under SCAN_INTERVAL_HOURS ago)
        4. dedupe by post ID → save new posts + planning records
        5. refresh public metrics (only if METRICS_LOOKBACK_DAYS > 0)
        6. SMM panel checks + auto-orders (optional; failures are only warnings)
@@ -174,14 +175,23 @@ The panel integration is **off by default**, and the bot works fully without it.
 1. Get your API key from BulkFollows → **Account Settings** and add it as the secret `SMM_API_KEY`.
 2. Set the variable `SMM_ENABLED=true`. On its own this only **reads**: balance, service metadata, and order status.
 3. Pick the services you want from the BulkFollows service list and set `SMM_IMPRESSION_SERVICE_ID` and/or `SMM_LIKE_SERVICE_ID`. Use "Default"-type services (they take a link and a quantity). The report shows each service's name, rate, min and max so you can confirm you picked the right ones.
-4. To place orders automatically, set `SMM_AUTO_ORDER=true`. **This spends your panel balance.** For every newly discovered post the bot orders `IMPRESSION_TARGET` impressions and `LIKE_TARGET` likes (whichever service IDs are set). Make sure the targets are within each service's min/max, or the panel rejects the order.
+4. To place orders automatically, set `SMM_AUTO_ORDER=true`. **This spends your panel balance.** For every newly discovered post the bot orders `LIKE_TARGET` likes and `IMPRESSION_TARGET` views (whichever service IDs are set).
+
+### How orders are placed
+
+- **Likes: one order**, placed in the run that discovers the post.
+- **Views: split.** The target is divided into `VIEW_SPLIT_MIN`–`VIEW_SPLIT_MAX` (default 10–12) uneven orders that add up exactly to `IMPRESSION_TARGET`, e.g. 5,000 → 381, 523, 447, … The first is placed straight away; the rest come due roughly an hour apart over `VIEW_SPREAD_HOURS` (default 12). Each hourly run places the ones that are due — normally one per post, two if a run was late or skipped.
+- If the target is too small for that many orders (each must be at least the service minimum), fewer orders are used.
+- The schedule is stored per post in `data/campaigns.json` under `view_schedule`, and the report shows a "Split view orders in progress" table.
+- Completion depends on GitHub starting the hourly runs. They usually start 5–30 minutes late and are occasionally skipped, so the last slice can land somewhat after the 12-hour mark. How fast each slice is *delivered* is up to the panel service.
 
 Safety properties of auto-ordering:
 
 - One order per type per post. The order ID is saved in `data/campaigns.json`, and reruns never re-order a post that already has one.
 - Dry runs never place orders.
-- A failed order (low balance, bad service ID, quantity out of range) is recorded as an error on that post and never fails the scan. It is **not retried automatically** on later runs.
-- To turn it off, set `SMM_AUTO_ORDER=false` (or delete the variable).
+- A rejected **view** order (low balance, quantity out of range) is reported, stays queued, and is tried again on the next runs, three times in all. A rejected **likes** order is recorded as an error on that post and not retried.
+- If the panel gives no clear answer (timeout, server error), the order is **never retried**, because it may already exist and a retry would pay twice. The report tells you to check the panel.
+- To turn it off, set `SMM_AUTO_ORDER=false` (or delete the variable). This also stops view orders that are still queued.
 
 **Using another panel.** Any panel that speaks the same v2 protocol works: set `SMM_API_URL` to its endpoint. The provider name stored on each order comes from the URL's domain (`bulkfollows.com` → `bulkfollows`), and status checks only query orders placed on the currently configured panel, so orders from a previous panel are left alone.
 
@@ -205,7 +215,7 @@ Each run then fetches the read-only status and the provider-reported charge, whi
    - *Workflow permissions*: the workflow requests `contents: write` itself. If your organization forces read-only tokens, select **Read and write permissions** so the bot can commit `data/` and `reports/`.
 3. Make sure the workflow file is on the **default branch**. Schedules only fire from there.
 
-**About timing:** GitHub runs scheduled workflows on a best-effort basis. Runs often start a few minutes, and sometimes 30+ minutes, after the scheduled time (minute 17 of every second hour, UTC). During heavy load a run can occasionally be skipped. On public repos, GitHub automatically disables scheduled workflows after 60 days without repository activity, and the bot's own commits count as activity. The saved last-seen post means a late or skipped run never loses posts. The next run picks them up.
+**About timing:** GitHub runs scheduled workflows on a best-effort basis. Runs often start a few minutes, and sometimes 30+ minutes, after the scheduled time (minute 17 of every hour, UTC). During heavy load a run can occasionally be skipped. On public repos, GitHub automatically disables scheduled workflows after 60 days without repository activity, and the bot's own commits count as activity. The saved last-seen post means a late or skipped run never loses posts. The next run picks them up.
 
 ## 7. Run the workflow manually
 
@@ -274,7 +284,7 @@ For more detail, set the variable `LOG_LEVEL=DEBUG`.
 
 | Item | Cost |
 | --- | --- |
-| GitHub Actions | Public repos: free for standard runners. Private repos: covered by your plan's included minutes; GitHub Free currently includes 2,000 minutes per month. Each run takes about 1 minute, so 12 runs a day is roughly 360 minutes per month. |
+| GitHub Actions | Public repos: free for standard runners. Private repos: covered by your plan's included minutes; GitHub Free currently includes 2,000 minutes per month. Each run takes about 1 minute, so 24 runs a day is roughly 720 minutes per month. |
 | Storage | JSON and Markdown in git: a few KB per day. |
 | Telegram | Free. |
 | X API | **Depends on your developer plan. Check it yourself.** X's tiers and prices have changed repeatedly, and this project does not assume any reads are free. |
@@ -282,7 +292,7 @@ For more detail, set the variable `LOG_LEVEL=DEBUG`.
 
 **X API usage per day** (typical):
 
-- 12 timeline requests, one per scan
+- 12 timeline requests, one per scan (the hourly runs in between do not call X)
 - 1 user lookup, on the first run only
 - posts read: each new post once, plus the few posts inside the once-a-day safety window
 
@@ -309,6 +319,7 @@ Long reports are split into several messages under Telegram's 4,096-character li
 | `INCLUDE_QUOTE_POSTS` | `true` | Include quote posts. Replies and reposts are always excluded. |
 | `X_PAGE_SIZE` | `100` | Posts per page (5–100). |
 | `X_MAX_PAGES` | `5` | Page cap per scan; hitting it marks the scan INCOMPLETE. |
+| `SCAN_INTERVAL_HOURS` | `2` | Minimum time between X scans. Hourly runs in between only place due orders. Manual runs always scan. |
 | `SCAN_OVERLAP_HOURS` | `2` | How far the once-a-day safety scan reaches back before the previous scan. |
 | `INITIAL_LOOKBACK_HOURS` | `24` | First-run window. |
 | `METRICS_LOOKBACK_DAYS` | `0` | Refresh metrics for posts this recent on every run. Off by default; costs post reads. |
@@ -319,6 +330,8 @@ Long reports are split into several messages under Telegram's 4,096-character li
 | `PROMOTION_BUDGET` / `PROMOTION_BUDGET_CURRENCY` | — / `USD` | Optional planning budget recorded per post. |
 | `SMM_ENABLED` | `false` | Enable the SMM panel (balance, services, order status). |
 | `SMM_AUTO_ORDER` | `false` | Place orders for each new post. **Spends money.** |
+| `VIEW_SPLIT_MIN` / `VIEW_SPLIT_MAX` | `10` / `12` | How many orders the views are split into. Set both to `1` for a single order. |
+| `VIEW_SPREAD_HOURS` | `12` | Time over which the view orders are placed. |
 | `SMM_API_URL` | `https://bulkfollows.com/api/v2` | Set only to use another v2-compatible panel. |
 | `SMM_API_KEY` | — | **Secret.** |
 | `SMM_IMPRESSION_SERVICE_ID` / `SMM_LIKE_SERVICE_ID` | — | Panel service IDs used for metadata and auto-orders. |

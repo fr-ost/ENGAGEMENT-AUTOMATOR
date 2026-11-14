@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+from .campaign_manager import view_schedule_progress
 from .config import BD_TZ, Config, format_iso, parse_iso_datetime
 
 
@@ -117,6 +118,10 @@ def render_markdown(summary: RunSummary, config: Config, posts: dict[str, Any], 
     if summary.new_posts:
         for post in summary.new_posts:
             lines.append(f"- [{post['post_id']}]({post['post_url']}) — created {_bd(post['created_at'])} ({post['kind']})")
+    elif summary.scan_status == "SKIPPED":
+        lines.append(
+            f"No scan this run: X is scanned every {config.scan_interval_hours}h. This run only placed orders that were due."
+        )
     else:
         lines.append("No new posts were found in this scan." if summary.scan_status == "SUCCESS" else "No new posts recorded.")
     lines.append("")
@@ -129,6 +134,19 @@ def render_markdown(summary: RunSummary, config: Config, posts: dict[str, Any], 
             plan = plans.get(pid, {})
             url = plan.get("post_url") or posts.get(pid, {}).get("post_url") or pid
             lines.append(f"| [{pid}]({url}) | {o['type']} | {o['order_id']} | {o['quantity']:,} |")
+        lines.append("")
+
+    schedules = [(plan, view_schedule_progress(plan)) for plan in plans.values()]
+    active = [(plan, p) for plan, p in schedules if p and (p["pending_orders"] or p["problem_orders"])]
+    if active:
+        lines += ["## Split view orders in progress", ""]
+        lines += ["| Post | Views ordered | Orders placed | Next order due |", "| --- | --- | --- | --- |"]
+        for plan, p in sorted(active, key=lambda item: int(item[0]["post_id"]), reverse=True):
+            note = f" ({p['problem_orders']} not placed)" if p["problem_orders"] else ""
+            lines.append(
+                f"| [{plan['post_id']}]({plan['post_url']}) | {p['placed_quantity']:,} / {p['total']:,} "
+                f"| {p['placed_orders']} / {p['orders']}{note} | {_bd(p['next_due'])} |"
+            )
         lines.append("")
 
     today = posts_discovered_on(posts, summary.bd_date)
@@ -215,6 +233,10 @@ def render_telegram(summary: RunSummary, config: Config) -> str:
     for post in summary.new_posts:
         lines.append(f"• {post['post_url']}")
     lines.append(f"Planning targets per post: {config.impression_target:,} impressions, {config.like_target:,} likes")
+    if config.smm_auto_order and config.smm_impression_service_id and summary.new_posts:
+        lines.append(
+            f"Views are ordered in {config.view_split_min}-{config.view_split_max} parts over {config.view_spread_hours:g}h; likes at once."
+        )
     if summary.orders_placed:
         lines.append(f"Auto-orders placed: {len(summary.orders_placed)}")
         for o in summary.orders_placed:

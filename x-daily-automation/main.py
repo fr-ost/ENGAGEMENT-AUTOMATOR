@@ -18,9 +18,11 @@ from typing import Any, Optional
 from src.campaign_manager import (
     SMMStatusProvider,
     apply_metrics,
+    DEFAULT_VIEW_LIMITS,
     auto_place_orders,
     ensure_plans,
     new_post_record,
+    place_due_view_orders,
     refresh_campaign_statuses,
     tracked_post_ids,
 )
@@ -47,6 +49,20 @@ log = logging.getLogger("x_daily")
 # Normal scans ask only for posts newer than the last one seen. This often, a scan
 # re-reads the overlap window instead, to catch a post X indexed late.
 WINDOW_RESCAN_INTERVAL = timedelta(hours=24)
+
+
+SCAN_INTERVAL_TOLERANCE = timedelta(minutes=20)  # scheduled runs start late and unevenly
+
+
+def _scan_due(state: dict[str, Any], config: Config, now: datetime) -> bool:
+    """Runs come more often than scans; in-between runs only place orders that are due."""
+    last = state.get("last_successful_scan_at")
+    if config.force_scan or config.scan_since_override or not config.scan_interval_hours or not last:
+        return True
+    try:
+        return now - parse_iso_datetime(last) >= timedelta(hours=config.scan_interval_hours) - SCAN_INTERVAL_TOLERANCE
+    except (TypeError, ValueError):
+        return True
 
 
 def _since_id(state: dict[str, Any], config: Config, now: datetime) -> Optional[str]:
@@ -115,7 +131,11 @@ def _run_locked(
     scan_ok = False
     scan_ids: set[str] = set()
     new_posts: list = []
+    scan_due = _scan_due(state, config, now)
     try:
+        if not scan_due:
+            summary.scan_status = "SKIPPED"
+            raise _ScanSkipped
         since_id = _since_id(state, config, now)
         result = Scanner(x_client, config).scan(
             state.get("account"), state.get("last_successful_scan_at"), now, since_id=since_id
@@ -157,6 +177,8 @@ def _run_locked(
                 state["last_window_scan_at"] = format_iso(now)
         if result.invalid_items:
             summary.warnings.append(f"Ignored {result.invalid_items} malformed post object(s) from the X API")
+    except _ScanSkipped:
+        log.info("Scan skipped: the last one was less than %dh ago", config.scan_interval_hours)
     except XAuthError as exc:
         summary.scan_status = "FAILED"
         summary.errors.append(f"X authentication failed: {exc}")
@@ -165,7 +187,7 @@ def _run_locked(
         summary.errors.append(f"X scan failed: {exc}")
 
     # 3. Refresh public metrics for recent tracked posts (best effort).
-    if summary.scan_status != "FAILED":
+    if summary.scan_status not in ("FAILED", "SKIPPED"):
         ids = tracked_post_ids(posts, now, config.metrics_lookback_days, exclude=scan_ids)
         if ids:
             try:
@@ -193,7 +215,7 @@ def _run_locked(
         summary.checkpoint_advanced = True
     summary.finished_at = _now()
     record_run(state, summary.to_run_record())
-    exit_code = 0 if scan_ok else 1
+    exit_code = 0 if scan_ok or not scan_due else 1
 
     if config.dry_run:
         summary.checkpoint_advanced = False
@@ -215,7 +237,7 @@ def _run_locked(
         path = write_report(config.reports_dir, summary, markdown)
         log.info("Report written to %s", path)
 
-    worth_a_message = bool(summary.new_posts or summary.errors or summary.scan_status != "SUCCESS")
+    worth_a_message = bool(summary.new_posts or summary.errors or summary.scan_status in ("FAILED", "INCOMPLETE"))
     if config.telegram_enabled and not config.dry_run and not worth_a_message:
         summary.telegram_status = "not sent (nothing new)"
         write_report(config.reports_dir, summary, render_markdown(summary, config, posts, plans))
@@ -274,6 +296,7 @@ def _smm_checks(
     except SMMError as exc:
         summary.warnings.append(f"SMM panel balance unavailable: {exc}")
 
+    view_limits = DEFAULT_VIEW_LIMITS
     wanted = [s for s in (config.smm_impression_service_id, config.smm_like_service_id) if s]
     if wanted:
         try:
@@ -284,24 +307,41 @@ def _smm_checks(
                     summary.warnings.append(f"SMM panel service {service_id} is not in the service list")
                 else:
                     summary.smm_services.append(summarize_service(item))
+                    if service_id == config.smm_impression_service_id:
+                        view_limits = _service_limits(item)
         except SMMError as exc:
             summary.warnings.append(f"SMM panel service metadata unavailable: {exc}")
 
-    # Auto-place orders for new posts if enabled.
-    if config.smm_auto_order and new_post_ids and not config.dry_run:
-        placed = auto_place_orders(new_post_ids, posts, plans, config, smm_client, now)
-        summary.orders_placed.extend(placed)
-        for entry in placed:
-            log.info(
-                "Auto-order placed: post=%s type=%s order=%s qty=%d",
-                entry["post_id"], entry["type"], entry["order_id"], entry["quantity"],
+    # Auto-ordering: likes at once and a split view schedule for new posts, then whatever
+    # view orders have come due (from this run's posts and earlier ones).
+    if config.smm_auto_order and not config.dry_run:
+        if new_post_ids:
+            summary.orders_placed.extend(
+                auto_place_orders(new_post_ids, posts, plans, config, smm_client, now, view_limits)
             )
+        placed, problems = place_due_view_orders(plans, config, smm_client, now)
+        summary.orders_placed.extend(placed)
+        summary.errors.extend(problems)
 
     campaign_summary = refresh_campaign_statuses(plans, {config.smm_provider: SMMStatusProvider(smm_client, config.smm_provider)}, now)
     summary.campaigns_checked = campaign_summary["checked"]
     summary.verified_spend = campaign_summary["verified_spend"]
     summary.warnings += [f"Campaign status check failed: {e}" for e in campaign_summary["errors"]]
     summary.smm_requests = smm_client.request_count
+
+
+class _ScanSkipped(Exception):
+    pass
+
+
+def _service_limits(item: dict[str, Any]) -> tuple[int, int]:
+    def as_int(value: Any, default: int) -> int:
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return default
+
+    return as_int(item.get("min"), DEFAULT_VIEW_LIMITS[0]), as_int(item.get("max"), DEFAULT_VIEW_LIMITS[1])
 
 
 def main() -> int:

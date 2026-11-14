@@ -2,9 +2,10 @@ name: X daily automation
 
 on:
   schedule:
-    # Every 2 hours. Off the top of the hour, where GitHub's scheduler is busiest;
-    # runs can still start late (often 5-30+ minutes) and are not guaranteed exact.
-    - cron: "17 */2 * * *"
+    # Hourly, so split view orders can be placed about an hour apart. X itself is
+    # only scanned every SCAN_INTERVAL_HOURS (default 2). Off the top of the hour,
+    # where GitHub's scheduler is busiest; runs can still start 5-30+ minutes late.
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       scan_since:
@@ -74,6 +75,7 @@ jobs:
           INCLUDE_QUOTE_POSTS: ${{ vars.INCLUDE_QUOTE_POSTS }}
           X_MAX_PAGES: ${{ vars.X_MAX_PAGES }}
           SCAN_OVERLAP_HOURS: ${{ vars.SCAN_OVERLAP_HOURS }}
+          SCAN_INTERVAL_HOURS: ${{ vars.SCAN_INTERVAL_HOURS }}
           INITIAL_LOOKBACK_HOURS: ${{ vars.INITIAL_LOOKBACK_HOURS }}
           METRICS_LOOKBACK_DAYS: ${{ vars.METRICS_LOOKBACK_DAYS }}
           IMPRESSION_TARGET: ${{ vars.IMPRESSION_TARGET }}
@@ -82,6 +84,9 @@ jobs:
           PROMOTION_BUDGET_CURRENCY: ${{ vars.PROMOTION_BUDGET_CURRENCY }}
           SMM_ENABLED: ${{ vars.SMM_ENABLED }}
           SMM_AUTO_ORDER: ${{ vars.SMM_AUTO_ORDER }}
+          VIEW_SPLIT_MIN: ${{ vars.VIEW_SPLIT_MIN }}
+          VIEW_SPLIT_MAX: ${{ vars.VIEW_SPLIT_MAX }}
+          VIEW_SPREAD_HOURS: ${{ vars.VIEW_SPREAD_HOURS }}
           SMM_API_URL: ${{ vars.SMM_API_URL }}
           SMM_IMPRESSION_SERVICE_ID: ${{ vars.SMM_IMPRESSION_SERVICE_ID }}
           SMM_LIKE_SERVICE_ID: ${{ vars.SMM_LIKE_SERVICE_ID }}
@@ -90,6 +95,7 @@ jobs:
           X_COST_PER_POST_READ_USD: ${{ vars.X_COST_PER_POST_READ_USD }}
           # Manual-run inputs (empty on scheduled runs)
           SCAN_SINCE: ${{ inputs.scan_since }}
+          FORCE_SCAN: ${{ github.event_name == 'workflow_dispatch' }}  # manual runs always scan
           DRY_RUN: ${{ inputs.dry_run }}
           ALLOW_STATE_REINIT: ${{ inputs.allow_state_reinit }}
         run: python main.py

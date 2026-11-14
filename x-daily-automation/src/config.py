@@ -38,6 +38,8 @@ class Config:
     initial_lookback_hours: int = 24
     scan_overlap_hours: int = 2
     scan_since_override: Optional[datetime] = None
+    scan_interval_hours: int = 2  # runs in between only place due orders
+    force_scan: bool = False
     metrics_lookback_days: int = 0  # off by default: every refresh re-reads (and pays for) old posts
 
     # HTTP behaviour shared by all clients
@@ -54,6 +56,9 @@ class Config:
     # SMM panel (BulkFollows by default)
     smm_enabled: bool = False
     smm_auto_order: bool = False  # place orders automatically for new posts
+    view_split_min: int = 10  # views are bought as this many separate orders...
+    view_split_max: int = 12
+    view_spread_hours: float = 12.0  # ...placed over this long
     smm_api_url: str = DEFAULT_SMM_API_URL
     smm_provider: str = "bulkfollows"  # derived from the API URL; stored on each order
     smm_api_key: Optional[str] = field(default=None, repr=False)
@@ -217,12 +222,20 @@ def load_config(env: Optional[Mapping[str, str]] = None) -> Config:
             promotion_budget_currency=_get(env, "PROMOTION_BUDGET_CURRENCY") or "USD",
             x_cost_per_request_usd=_float(env, "X_COST_PER_REQUEST_USD"),
             x_cost_per_post_read_usd=_float(env, "X_COST_PER_POST_READ_USD"),
+            scan_interval_hours=_int(env, "SCAN_INTERVAL_HOURS", 2, 0, 48),
+            force_scan=_bool(env, "FORCE_SCAN", False),
+            view_split_min=_int(env, "VIEW_SPLIT_MIN", 10, 1, 50),
+            view_split_max=_int(env, "VIEW_SPLIT_MAX", 12, 1, 50),
+            view_spread_hours=_float(env, "VIEW_SPREAD_HOURS") if _get(env, "VIEW_SPREAD_HOURS") else 12.0,
             dry_run=_bool(env, "DRY_RUN", False),
             allow_state_reinit=_bool(env, "ALLOW_STATE_REINIT", False),
         )
     except ConfigError as exc:
         errors.append(str(exc))
         kwargs = {}
+
+    if kwargs and kwargs["view_split_min"] > kwargs["view_split_max"]:
+        errors.append("VIEW_SPLIT_MIN must not be greater than VIEW_SPLIT_MAX")
 
     data_dir = Path(_get(env, "DATA_DIR") or PROJECT_ROOT / "data")
     reports_dir = Path(_get(env, "REPORTS_DIR") or PROJECT_ROOT / "reports")

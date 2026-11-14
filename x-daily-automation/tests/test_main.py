@@ -319,6 +319,133 @@ def test_auto_order_placed_for_new_posts(mocked, make_config):
     assert "auto-ordered via example" in text
 
 
+def _fake_panel(mocked, reject_add=None):
+    """A panel that answers by action and records every order placed."""
+    from urllib.parse import parse_qs
+
+    placed = []
+
+    def reply(request):
+        form = {k: v[0] for k, v in parse_qs(request.body).items()}
+        action = form["action"]
+        if action == "balance":
+            return 200, {}, json.dumps({"balance": "50.00", "currency": "USD"})
+        if action == "services":
+            return 200, {}, json.dumps([
+                {"service": 5, "name": "Views", "rate": "0.002", "min": "100", "max": "1000000"},
+                {"service": 7, "name": "Likes", "rate": "3.7", "min": "10", "max": "5000"},
+            ])
+        if action == "status":
+            return 200, {}, json.dumps({"status": "Completed", "charge": "0.01", "currency": "USD"})
+        if reject_add and reject_add[0]:
+            return 200, {}, json.dumps({"error": reject_add[0]})
+        placed.append((form["service"], form["link"], int(form["quantity"])))
+        return 200, {}, json.dumps({"order": 70000 + len(placed)})
+
+    mocked.add_callback("POST", SMM_URL, callback=reply)
+    return placed
+
+
+def test_hourly_runs_scan_every_two_hours_and_drip_views_over_twelve_hours(mocked, make_config):
+    cfg = make_config(SMM_ENABLED="true", SMM_AUTO_ORDER="true", SMM_API_URL=SMM_URL, SMM_API_KEY="smm-key",
+                      SMM_IMPRESSION_SERVICE_ID="5", SMM_LIKE_SERVICE_ID="7", IMPRESSION_TARGET=5000,
+                      LIKE_TARGET=50, SCAN_INTERVAL_HOURS=2,
+                      TELEGRAM_ENABLED="true", TELEGRAM_BOT_TOKEN=TG_TOKEN, TELEGRAM_CHAT_ID="42")
+    one_post = [raw_post("1866000000000000001", "2026-10-26T16:30:00.000Z")]
+    link = "https://x.com/ExampleUser/status/1866000000000000001"
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body(one_post))
+    mocked.post(TG_URL, json={"ok": True})
+    placed = _fake_panel(mocked)
+
+    def run_at(hours):
+        smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
+        assert main.run(cfg, now=NOW + timedelta(hours=hours), x_client=client(), smm_client=smm) == 0
+
+    def timeline_calls():
+        return sum("/tweets" in c.request.url for c in mocked.calls)
+
+    def telegram_texts():
+        return [json.loads(c.request.body)["text"] for c in mocked.calls if "telegram" in c.request.url]
+
+    # Discovery run: likes in one shot, plus only the first slice of views.
+    run_at(0)
+    likes = [o for o in placed if o[0] == "7"]
+    views = [o for o in placed if o[0] == "5"]
+    assert likes == [("7", link, 50)]
+    assert len(views) == 1 and views[0][2] < 5000 / 5
+    schedule = read(cfg, "campaigns.json")["plans"]["1866000000000000001"]["view_schedule"]["orders"]
+    assert 10 <= len(schedule) <= 12 and sum(o["quantity"] for o in schedule) == 5000
+    assert "Views are ordered in 10-12 parts over 12h; likes at once." in telegram_texts()[0]
+    assert "Split view orders in progress" in report(cfg)
+
+    mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
+    scans_after_discovery = timeline_calls()
+
+    # One hour later: too soon to scan X again, but a view order is due.
+    run_at(1)
+    assert timeline_calls() == scans_after_discovery
+    assert read(cfg, "state.json")["last_successful_scan_at"] == "2026-10-26T17:00:00Z"
+    assert "No scan this run" in report(cfg, "2026-10-27")
+
+    for hour in range(2, 14):
+        run_at(hour)
+    views = [o[2] for o in placed if o[0] == "5"]
+    assert sum(views) == 5000 and len(views) == len(schedule)             # the whole total, in parts
+    assert len([o for o in placed if o[0] == "7"]) == 1                   # likes never repeated
+    assert timeline_calls() == scans_after_discovery + 6                  # hours 2, 4, ... 12
+    assert len(telegram_texts()) == 1                                     # no hourly spam
+    assert "Split view orders in progress" not in report(cfg, "2026-10-27")
+
+    run_at(14)                                                            # nothing left to place
+    assert sum(o[2] for o in placed if o[0] == "5") == 5000
+
+
+def test_rejected_view_order_is_reported_and_retried_next_run(mocked, make_config):
+    cfg = make_config(SMM_ENABLED="true", SMM_AUTO_ORDER="true", SMM_API_URL=SMM_URL, SMM_API_KEY="smm-key",
+                      SMM_IMPRESSION_SERVICE_ID="5", VIEW_SPLIT_MIN=1, VIEW_SPLIT_MAX=1)
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body([raw_post("1866000000000000001")]))
+    reject = ["Not enough funds on balance"]
+    placed = _fake_panel(mocked, reject)
+    smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
+
+    assert main.run(cfg, now=NOW, x_client=client(), smm_client=smm) == 0
+    assert placed == [] and "Not enough funds" in report(cfg) and "will retry next run" in report(cfg)
+
+    reject[0] = None                                                      # balance topped up
+    mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
+    assert main.run(cfg, now=NOW + timedelta(hours=1), x_client=client(), smm_client=smm) == 0
+    assert placed == [("5", "https://x.com/ExampleUser/status/1866000000000000001", 1000)]
+
+
+def test_turning_auto_order_off_stops_pending_view_orders(mocked, make_config):
+    common = dict(SMM_ENABLED="true", SMM_API_URL=SMM_URL, SMM_API_KEY="smm-key", SMM_IMPRESSION_SERVICE_ID="5")
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body([raw_post("1866000000000000001")]))
+    placed = _fake_panel(mocked)
+    smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
+    assert main.run(make_config(SMM_AUTO_ORDER="true", **common), now=NOW, x_client=client(), smm_client=smm) == 0
+    assert len(placed) == 1
+
+    mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
+    off = make_config(SMM_AUTO_ORDER="false", **common)
+    assert main.run(off, now=NOW + timedelta(hours=13), x_client=client(), smm_client=smm) == 0
+    assert len(placed) == 1
+
+
+def test_manual_run_scans_even_inside_the_interval(mocked, make_config):
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body(TWO_POSTS))
+    assert main.run(make_config(SCAN_INTERVAL_HOURS=2), now=NOW, x_client=client()) == 0
+    before = sum("/tweets" in c.request.url for c in mocked.calls)
+    later = NOW + timedelta(minutes=30)
+    assert main.run(make_config(SCAN_INTERVAL_HOURS=2), now=later, x_client=client()) == 0
+    assert sum("/tweets" in c.request.url for c in mocked.calls) == before
+    assert main.run(make_config(SCAN_INTERVAL_HOURS=2, FORCE_SCAN="true"), now=later, x_client=client()) == 0
+    assert sum("/tweets" in c.request.url for c in mocked.calls) == before + 1
+
+
 def test_auto_order_is_idempotent_on_rerun(mocked, make_config):
     cfg = make_config(SMM_ENABLED="true", SMM_AUTO_ORDER="true", SMM_API_URL=SMM_URL, SMM_API_KEY="smm-key",
                       SMM_IMPRESSION_SERVICE_ID="5", SMM_LIKE_SERVICE_ID="7")

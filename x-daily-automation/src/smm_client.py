@@ -42,7 +42,11 @@ class SMMError(Exception):
     """Base error. Messages never contain the API key."""
 
 
-class SMMAuthError(SMMError):
+class SMMRejected(SMMError):
+    """The panel answered with an error, so the request definitely had no effect."""
+
+
+class SMMAuthError(SMMRejected):
     """The API key was rejected."""
 
 
@@ -115,8 +119,9 @@ class SMMClient:
         self._sleep = sleep
         self.request_count = 0
 
-    def _post(self, action: str, **params: Any) -> Any:
+    def _post(self, action: str, _retries: Optional[int] = None, **params: Any) -> Any:
         data = {"key": self._key, "action": ACTIONS[action], **params}
+        max_retries = self._max_retries if _retries is None else _retries
         attempt = 0
         while True:
             attempt += 1
@@ -124,12 +129,12 @@ class SMMClient:
             try:
                 resp = self._session.post(self._url, data=data, timeout=self._timeout)
             except requests.Timeout:
-                if attempt > self._max_retries:
+                if attempt > max_retries:
                     raise SMMError(f"SMM API timed out on '{action}' after {attempt} attempts") from None
                 self._backoff(attempt, action)
                 continue
             except requests.RequestException as exc:
-                if attempt > self._max_retries:
+                if attempt > max_retries:
                     raise SMMError(f"SMM API network error on '{action}': {type(exc).__name__}") from None
                 self._backoff(attempt, action)
                 continue
@@ -137,7 +142,7 @@ class SMMClient:
             if resp.status_code in (401, 403):
                 raise SMMAuthError(f"SMM API rejected the API key (HTTP {resp.status_code}). Check SMM_API_KEY.")
             if resp.status_code == 429 or resp.status_code >= 500:
-                if attempt > self._max_retries:
+                if attempt > max_retries:
                     raise SMMError(f"SMM API HTTP {resp.status_code} on '{action}' after {attempt} attempts")
                 self._backoff(attempt, action)
                 continue
@@ -151,7 +156,7 @@ class SMMClient:
                 message = str(body.get("error"))[:200].replace(self._key, "***")
                 if any(hint in message.lower() for hint in _AUTH_HINTS):
                     raise SMMAuthError(f"SMM API authentication failed: {message}")
-                raise SMMError(f"SMM API error on '{action}': {message}")
+                raise SMMRejected(f"SMM API error on '{action}': {message}")
             return body
 
     def _backoff(self, attempt: int, action: str) -> None:
@@ -208,7 +213,9 @@ class SMMClient:
         """Submit a new order to the SMM panel (action=add).
 
         Only called when SMM_AUTO_ORDER=true. The panel's standard response is
-        {"order": <integer>}. Raises SMMError on any failure.
+        {"order": <integer>}. Never retried here: after a timeout the order may
+        exist, and a retry would buy it twice. SMMRejected means it was
+        definitely not placed; any other SMMError means the outcome is unknown.
         """
         if not str(service_id).strip():
             raise ValueError("service_id is required")
@@ -216,7 +223,7 @@ class SMMClient:
             raise ValueError("link must be an https:// URL")
         if quantity <= 0:
             raise ValueError("quantity must be a positive integer")
-        body = self._post("add", service=str(service_id), link=link, quantity=str(quantity))
+        body = self._post("add", _retries=0, service=str(service_id), link=link, quantity=str(quantity))
         if not isinstance(body, dict) or "order" not in body:
             raise SMMResponseError("Order response has no 'order' field")
         return OrderResult(order_id=str(body["order"]))

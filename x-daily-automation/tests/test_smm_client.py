@@ -4,7 +4,7 @@ import pytest
 import requests
 
 from src import smm_client
-from src.smm_client import SMMAuthError, SMMClient, SMMError, SMMResponseError, summarize_service, OrderResult
+from src.smm_client import SMMAuthError, SMMClient, SMMError, SMMRejected, SMMResponseError, summarize_service, OrderResult
 
 URL = "https://panel.example.test/api/v2"
 KEY = "smm-secret-key-123"
@@ -79,6 +79,20 @@ def test_place_order_validation():
         c.place_order("7", "http://x.com/u/status/1", 100)  # not https
     with pytest.raises(ValueError):
         c.place_order("7", "https://x.com/u/status/1", 0)
+
+
+def test_place_order_is_never_retried_when_the_outcome_is_unclear(mocked, client):
+    mocked.post(URL, body=requests.Timeout())
+    with pytest.raises(SMMError) as excinfo:
+        client.place_order("7", "https://x.com/user/status/1234", 1000)
+    assert not isinstance(excinfo.value, SMMRejected)
+    assert len(mocked.calls) == 1          # a retry could buy the order twice
+
+
+def test_panel_error_body_is_a_definite_rejection(mocked, client):
+    mocked.post(URL, json={"error": "Not enough funds on balance"})
+    with pytest.raises(SMMRejected):
+        client.place_order("7", "https://x.com/user/status/1234", 1000)
 
 
 def test_add_action_is_in_actions():

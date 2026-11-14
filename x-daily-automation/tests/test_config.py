@@ -40,6 +40,7 @@ def test_missing_required_values_listed_together():
         ({"SMM_ENABLED": "true"}, "SMM_API_KEY"),
         ({"SMM_ENABLED": "true", "SMM_API_URL": "http://insecure.test", "SMM_API_KEY": "k"}, "https"),
         ({"TELEGRAM_ENABLED": "true"}, "TELEGRAM_BOT_TOKEN"),
+        ({"VIEW_SPLIT_MIN": "12", "VIEW_SPLIT_MAX": "10"}, "VIEW_SPLIT_MIN"),
         ({"X_MAX_PAGES": "0"}, "X_MAX_PAGES"),
         ({"X_USER_ID": "abc"}, "digits"),
         ({"SCAN_SINCE": "last tuesday"}, "SCAN_SINCE"),
