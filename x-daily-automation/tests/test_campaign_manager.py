@@ -12,6 +12,8 @@ from src.campaign_manager import (
     auto_place_orders,
     ensure_plans,
     new_post_record,
+    next_view_order_time,
+    next_view_order_wake,
     place_due_view_orders,
     refresh_campaign_statuses,
     tracked_post_ids,
@@ -118,22 +120,37 @@ def _smm_client_mock(order_id="99001"):
     return client
 
 
+def _scheduled(make_config, target=5000, seed=4, **overrides):
+    """A post whose views were just scheduled (no likes service), with its config and a panel mock."""
+    posts, plans = posts_with("1"), {}
+    cfg = make_config(SMM_IMPRESSION_SERVICE_ID="5", IMPRESSION_TARGET=target, **overrides)
+    ensure_plans(posts, plans, cfg, NOW)
+    client = _smm_client_mock()
+    assert auto_place_orders(["1"], posts, plans, cfg, client, NOW, rng=random.Random(seed)) == ([], [])
+    return plans, cfg, client
+
+
+def _orders(plans):
+    return plans["1"]["view_schedule"]["orders"]
+
+
 def test_new_post_gets_likes_at_once_and_a_split_view_schedule(make_config):
     posts, plans = posts_with("1"), {}
     cfg = make_config(SMM_IMPRESSION_SERVICE_ID="5", SMM_LIKE_SERVICE_ID="7", IMPRESSION_TARGET=5000)
     ensure_plans(posts, plans, cfg, NOW)
     client = _smm_client_mock("99001")
 
-    results = auto_place_orders(["1"], posts, plans, cfg, client, NOW, rng=random.Random(4))
+    results, problems = auto_place_orders(["1"], posts, plans, cfg, client, NOW, rng=random.Random(4))
 
     # Likes: one order, now. Views: nothing bought yet, only scheduled.
     assert results == [{"post_id": "1", "type": "likes", "order_id": "99001", "quantity": 30}]
+    assert problems == []
     client.place_order.assert_called_once_with("7", "https://x.com/u/status/1", 30)
     campaigns = plans["1"]["authorized_campaigns"]
     assert [c["type"] for c in campaigns] == ["likes"]
     assert campaigns[0]["provider"] == "bulkfollows" and campaigns[0]["authorized_by"] == "auto"
 
-    orders = plans["1"]["view_schedule"]["orders"]
+    orders = _orders(plans)
     assert 10 <= len(orders) <= 12
     assert sum(o["quantity"] for o in orders) == 5000
     assert len({o["quantity"] for o in orders}) > 1                      # uneven
@@ -143,29 +160,59 @@ def test_new_post_gets_likes_at_once_and_a_split_view_schedule(make_config):
     assert due[-1] < NOW + timedelta(hours=12)
 
 
-def test_view_orders_are_placed_as_they_come_due_until_the_total_is_reached(make_config):
-    posts, plans = posts_with("1"), {}
-    cfg = make_config(SMM_IMPRESSION_SERVICE_ID="5", IMPRESSION_TARGET=5000)
-    ensure_plans(posts, plans, cfg, NOW)
-    client = _smm_client_mock()
-    auto_place_orders(["1"], posts, plans, cfg, client, NOW, rng=random.Random(4))
-    total_orders = len(plans["1"]["view_schedule"]["orders"])
+def test_view_orders_go_out_one_at_a_time_exactly_when_each_is_due(make_config):
+    plans, cfg, client = _scheduled(make_config)
+    orders = _orders(plans)
+    total_orders = len(orders)
 
-    placed, problems = place_due_view_orders(plans, cfg, client, NOW)
-    assert len(placed) == 1 and placed[0]["type"] == f"views 1/{total_orders}" and problems == []
-    assert place_due_view_orders(plans, cfg, client, NOW) == ([], [])     # nothing else due yet
+    first = place_due_view_orders(plans, cfg, client, NOW)
+    assert [p["type"] for p in first.placed] == [f"views 1/{total_orders}"]
+    assert first.problems == [] and first.completed == []
+    assert place_due_view_orders(plans, cfg, client, NOW).placed == []    # the next one is not due yet
 
-    quantities = [placed[0]["quantity"]]
-    for hour in range(1, 14):                                             # hourly runs
-        more, problems = place_due_view_orders(plans, cfg, client, NOW + timedelta(hours=hour))
-        assert problems == [] and len(more) <= 2
-        quantities += [m["quantity"] for m in more]
-    assert sum(quantities) == 5000 and len(quantities) == total_orders
+    placed = [first.placed[0]["quantity"]]
+    for position, order in enumerate(orders[1:], start=2):
+        due = parse_iso_datetime(order["due_at"])
+        assert next_view_order_time(plans["1"]) == due == next_view_order_wake(plans)
+        assert place_due_view_orders(plans, cfg, client, due - timedelta(seconds=1)).placed == []
+        outcome = place_due_view_orders(plans, cfg, client, due)
+        assert [p["type"] for p in outcome.placed] == [f"views {position}/{total_orders}"]
+        assert outcome.placed[0]["quantity"] == order["quantity"]
+        assert bool(outcome.completed) == (position == total_orders)
+        placed.append(outcome.placed[0]["quantity"])
+
+    assert sum(placed) == 5000
+    assert outcome.completed[0]["post_url"] == "https://x.com/u/status/1"
+    assert outcome.completed[0]["placed_quantity"] == 5000 and outcome.completed[0]["placed_orders"] == total_orders
+    assert parse_iso_datetime(orders[-1]["placed_at"]) < NOW + timedelta(hours=12)   # all ordered inside 12h
+    assert next_view_order_time(plans["1"]) is None and next_view_order_wake(plans) is None
     progress = view_schedule_progress(plans["1"])
-    assert progress["placed_quantity"] == 5000 and progress["pending_orders"] == 0
+    assert progress["placed_quantity"] == 5000 and progress["pending_orders"] == 0 and progress["next_due"] is None
     splits = [c for c in plans["1"]["authorized_campaigns"] if c["type"] == "impressions"]
     assert len(splits) == total_orders and splits[0]["split"] == f"1/{total_orders}"
-    assert place_due_view_orders(plans, cfg, client, NOW + timedelta(days=2)) == ([], [])
+    assert place_due_view_orders(plans, cfg, client, NOW + timedelta(days=2)).placed == []
+
+
+def test_overdue_view_orders_are_caught_up_ten_minutes_apart_never_all_at_once(make_config):
+    # What happens if nothing ran for hours: the backlog still goes out as separate orders.
+    plans, cfg, client = _scheduled(make_config, target=4000)
+    total_orders = len(_orders(plans))
+    place_due_view_orders(plans, cfg, client, NOW)
+    late = NOW + timedelta(hours=16)                                      # every remaining order is overdue
+
+    when, placements = late, []
+    while next_view_order_time(plans["1"]) is not None:
+        assert next_view_order_time(plans["1"]) <= when
+        if placements:                                                    # too soon after the previous one
+            assert place_due_view_orders(plans, cfg, client, when - timedelta(seconds=1)).placed == []
+        outcome = place_due_view_orders(plans, cfg, client, when)
+        assert len(outcome.placed) == 1                                   # one per post per call
+        placements.append(when)
+        when += timedelta(minutes=10)
+
+    assert len(placements) == total_orders - 1
+    assert placements[-1] - placements[0] == timedelta(minutes=10 * (total_orders - 2))
+    assert sum(o["quantity"] for o in _orders(plans) if o["status"] == "placed") == 4000
 
 
 def test_scheduling_is_idempotent_and_respects_existing_orders(make_config):
@@ -186,68 +233,97 @@ def test_scheduling_is_idempotent_and_respects_existing_orders(make_config):
 
 
 def test_small_view_target_uses_fewer_orders_and_tiny_target_is_reported(make_config):
-    posts, plans = posts_with("1"), {}
-    cfg = make_config(SMM_IMPRESSION_SERVICE_ID="5", IMPRESSION_TARGET=350)
-    ensure_plans(posts, plans, cfg, NOW)
-    auto_place_orders(["1"], posts, plans, cfg, _smm_client_mock(), NOW, view_limits=(100, 10**9))
-    assert len(plans["1"]["view_schedule"]["orders"]) == 3
+    plans, _, _ = _scheduled(make_config, target=350)
+    assert len(_orders(plans)) == 3
 
     posts, plans = posts_with("2"), {}
     cfg = make_config(SMM_IMPRESSION_SERVICE_ID="5", IMPRESSION_TARGET=50)
     ensure_plans(posts, plans, cfg, NOW)
-    auto_place_orders(["2"], posts, plans, cfg, _smm_client_mock(), NOW, view_limits=(100, 10**9))
-    assert "view_schedule" not in plans["2"]
-    assert "below the service minimum" in plans["2"]["errors"][0]
+    results, problems = auto_place_orders(["2"], posts, plans, cfg, _smm_client_mock(), NOW, view_limits=(100, 10**9))
+    assert results == [] and "view_schedule" not in plans["2"]
+    assert "below the service minimum" in problems[0] and problems == plans["2"]["errors"]
 
 
-def test_rejected_view_order_is_retried_then_given_up(make_config):
-    posts, plans = posts_with("1"), {}
-    cfg = make_config(SMM_IMPRESSION_SERVICE_ID="5", VIEW_SPLIT_MIN=2, VIEW_SPLIT_MAX=2)
-    ensure_plans(posts, plans, cfg, NOW)
-    client = MagicMock()
+def test_rejected_view_order_waits_half_an_hour_and_carries_on_once_the_panel_accepts(make_config):
+    plans, cfg, client = _scheduled(make_config, VIEW_SPLIT_MIN=2, VIEW_SPLIT_MAX=2)
     client.place_order.side_effect = SMMRejected("Not enough funds on balance")
-    auto_place_orders(["1"], posts, plans, cfg, client, NOW)
 
-    later = NOW + timedelta(days=1)                                        # both splits are due
-    for attempt in (1, 2):
-        placed, problems = place_due_view_orders(plans, cfg, client, later)
-        assert placed == [] and len(problems) == 1 and "will retry next run" in problems[0]
-        assert client.place_order.call_count == attempt                    # the second split is not attempted
-    placed, problems = place_due_view_orders(plans, cfg, client, later)
-    assert "giving up" in problems[0]
-    first, second = plans["1"]["view_schedule"]["orders"]
-    assert first["status"] == "failed" and second["status"] == "pending"
+    first = place_due_view_orders(plans, cfg, client, NOW)
+    assert first.placed == [] and first.notes == []
+    assert "Not enough funds" in first.problems[0] and "trying again in 30 min" in first.problems[0]
+    assert next_view_order_time(plans["1"]) == NOW + timedelta(minutes=30)
+    assert view_schedule_progress(plans["1"])["retrying"] is True
+
+    place_due_view_orders(plans, cfg, client, NOW + timedelta(minutes=29))
+    assert client.place_order.call_count == 1                              # not hammered in between
+
+    again = place_due_view_orders(plans, cfg, client, NOW + timedelta(minutes=30))
+    assert client.place_order.call_count == 2
+    assert again.problems == [] and "trying again" in again.notes[0]       # repeats are not re-announced
 
     client.place_order.side_effect = None                                  # balance topped up
     client.place_order.return_value = OrderResult(order_id="5")
-    placed, problems = place_due_view_orders(plans, cfg, client, later)
-    assert len(placed) == 1 and second["status"] == "placed"
+    done = place_due_view_orders(plans, cfg, client, NOW + timedelta(hours=1))
+    assert [p["type"] for p in done.placed] == ["views 1/2"]
+    assert plans["1"]["view_schedule"]["failures"] == 0 and "retry_after" not in plans["1"]["view_schedule"]
+    assert view_schedule_progress(plans["1"])["retrying"] is False
+
+    # A later failure is a new problem again, not a silent repeat.
+    client.place_order.side_effect = SMMRejected("Not enough funds on balance")
+    later = place_due_view_orders(plans, cfg, client, NOW + timedelta(hours=12))
+    assert len(later.problems) == 1 and later.notes == []
 
 
-def test_unclear_view_order_outcome_is_never_retried(make_config):
-    posts, plans = posts_with("1"), {}
-    cfg = make_config(SMM_IMPRESSION_SERVICE_ID="5", VIEW_SPLIT_MIN=1, VIEW_SPLIT_MAX=1)
-    ensure_plans(posts, plans, cfg, NOW)
-    client = MagicMock()
+def test_view_orders_are_given_up_long_after_the_schedule_should_have_finished(make_config):
+    plans, cfg, client = _scheduled(make_config, VIEW_SPLIT_MIN=3, VIEW_SPLIT_MAX=3)
+    place_due_view_orders(plans, cfg, client, NOW)                         # 1 of 3 placed
+    client.place_order.side_effect = SMMRejected("Not enough funds on balance")
+
+    still_trying = place_due_view_orders(plans, cfg, client, NOW + timedelta(hours=23))
+    assert "trying again" in still_trying.problems[0]
+    assert [o["status"] for o in _orders(plans)] == ["placed", "pending", "pending"]
+
+    final = place_due_view_orders(plans, cfg, client, NOW + timedelta(hours=24, minutes=1))
+    assert "giving up on this post's remaining 2 view order(s)" in final.problems[0]
+    assert [o["status"] for o in _orders(plans)] == ["placed", "failed", "failed"]
+    assert next_view_order_time(plans["1"]) is None
+    assert final.problems[0] in plans["1"]["errors"]
+    assert view_schedule_progress(plans["1"])["problem_orders"] == 2
+
+
+def test_order_with_no_clear_answer_is_tried_once_more_then_left_alone(make_config):
+    plans, cfg, client = _scheduled(make_config, VIEW_SPLIT_MIN=2, VIEW_SPLIT_MAX=2)
     client.place_order.side_effect = SMMError("SMM API timed out on 'add' after 1 attempts")
-    auto_place_orders(["1"], posts, plans, cfg, client, NOW)
 
-    placed, problems = place_due_view_orders(plans, cfg, client, NOW)
-    assert placed == [] and "outcome unknown" in problems[0]
-    assert plans["1"]["view_schedule"]["orders"][0]["status"] == "unknown"
-    assert place_due_view_orders(plans, cfg, client, NOW + timedelta(days=1)) == ([], [])
-    assert client.place_order.call_count == 1
+    first = place_due_view_orders(plans, cfg, client, NOW)
+    assert first.placed == [] and "got no clear answer" in first.problems[0]
+    assert _orders(plans)[0]["status"] == "pending"
+
+    second = place_due_view_orders(plans, cfg, client, NOW + timedelta(minutes=30))
+    assert "outcome unknown" in second.problems[0] and "not tried again" in second.problems[0]
+    assert _orders(plans)[0]["status"] == "unknown"
+    assert client.place_order.call_count == 2
+
+    # The same order is never sent a third time; the schedule moves on to the next one.
+    client.place_order.side_effect = None
+    client.place_order.return_value = OrderResult(order_id="6")
+    rest = place_due_view_orders(plans, cfg, client, NOW + timedelta(hours=12))
+    assert [p["type"] for p in rest.placed] == ["views 2/2"]
+    assert client.place_order.call_count == 3
+    assert rest.completed == [] or rest.completed[0]["problem_orders"] == 1
 
 
-def test_failed_likes_order_is_recorded_not_raised(make_config):
+def test_failed_likes_order_is_reported_not_raised(make_config):
     posts, plans = posts_with("1"), {}
     cfg = make_config(SMM_LIKE_SERVICE_ID="7")
     ensure_plans(posts, plans, cfg, NOW)
     client = MagicMock()
     client.place_order.side_effect = SMMError("Insufficient balance")
 
-    assert auto_place_orders(["1"], posts, plans, cfg, client, NOW) == []
-    assert "Insufficient balance" in plans["1"]["errors"][0]
+    results, problems = auto_place_orders(["1"], posts, plans, cfg, client, NOW)
+    assert results == []
+    assert "Likes order failed" in problems[0] and "Insufficient balance" in problems[0]
+    assert problems == plans["1"]["errors"]
 
 
 def test_finished_orders_are_not_asked_about_again(make_config):
@@ -269,9 +345,7 @@ def test_auto_place_orders_skips_unknown_post_ids(make_config):
     ensure_plans(posts, plans, cfg, NOW)
     client = _smm_client_mock()
 
-    results = auto_place_orders(["999"], posts, plans, cfg, client, NOW)
-
-    assert results == []
+    assert auto_place_orders(["999"], posts, plans, cfg, client, NOW) == ([], [])
     assert client.place_order.call_count == 0
 
 

@@ -38,8 +38,12 @@ class Config:
     initial_lookback_hours: int = 24
     scan_overlap_hours: int = 2
     scan_since_override: Optional[datetime] = None
-    scan_interval_hours: int = 2  # runs in between only place due orders
+    scan_interval_hours: int = 2  # cycles in between only place due orders
     force_scan: bool = False
+    # auto: stay running while view orders wait and for a while after the latest post | always | off
+    keep_alive: str = "auto"
+    keep_alive_after_post_hours: float = 24.0  # auto mode: how long after the latest new post
+    keep_alive_minutes: int = 0  # hand over to a fresh run after this long (0 = no limit)
     metrics_lookback_days: int = 0  # off by default: every refresh re-reads (and pays for) old posts
 
     # HTTP behaviour shared by all clients
@@ -158,6 +162,17 @@ def _https_url(name: str, raw: str) -> str:
     return raw.rstrip("/")
 
 
+def _keep_alive(env: Mapping[str, str]) -> str:
+    raw = (env.get("KEEP_ALIVE") or "").strip().lower()
+    if raw in ("", "auto") or raw in _TRUE:
+        return "auto"
+    if raw == "always":
+        return "always"
+    if raw in _FALSE:
+        return "off"
+    raise ConfigError(f"KEEP_ALIVE must be auto, always or off, got {raw!r}")
+
+
 def _provider_name(url: str) -> str:
     """bulkfollows.com -> "bulkfollows"; keeps orders from different panels apart."""
     labels = (urlparse(url).hostname or "").split(".")
@@ -224,6 +239,11 @@ def load_config(env: Optional[Mapping[str, str]] = None) -> Config:
             x_cost_per_post_read_usd=_float(env, "X_COST_PER_POST_READ_USD"),
             scan_interval_hours=_int(env, "SCAN_INTERVAL_HOURS", 2, 0, 48),
             force_scan=_bool(env, "FORCE_SCAN", False),
+            keep_alive=_keep_alive(env),
+            keep_alive_after_post_hours=(
+                _float(env, "KEEP_ALIVE_AFTER_POST_HOURS") if _get(env, "KEEP_ALIVE_AFTER_POST_HOURS") else 24.0
+            ),
+            keep_alive_minutes=_int(env, "KEEP_ALIVE_MINUTES", 0, 0, 7 * 24 * 60),
             view_split_min=_int(env, "VIEW_SPLIT_MIN", 10, 1, 50),
             view_split_max=_int(env, "VIEW_SPLIT_MAX", 12, 1, 50),
             view_spread_hours=_float(env, "VIEW_SPREAD_HOURS") if _get(env, "VIEW_SPREAD_HOURS") else 12.0,

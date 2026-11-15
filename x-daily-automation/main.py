@@ -1,7 +1,12 @@
-"""Daily X post discovery and promotion-planning run.
+"""X post discovery and promotion ordering.
 
-Exit codes:
-  0  scan succeeded and state was saved
+One *cycle* scans X when a scan is due, orders for new posts, and places the
+split view orders that have come due. The process then stays alive and repeats
+the cycle whenever the next order or scan is due (see src/keepalive.py), because
+GitHub cannot be relied on to start a fresh run at those moments.
+
+Exit codes (of the last cycle):
+  0  scan succeeded (or was not due) and state was saved
   1  scan failed or was incomplete, or state could not be saved
      (the previous checkpoint is preserved)
   2  configuration error
@@ -11,7 +16,10 @@ Exit codes:
 from __future__ import annotations
 
 import logging
+import os
 import sys
+import time
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
@@ -22,6 +30,7 @@ from src.campaign_manager import (
     auto_place_orders,
     ensure_plans,
     new_post_record,
+    next_view_order_wake,
     place_due_view_orders,
     refresh_campaign_statuses,
     tracked_post_ids,
@@ -37,6 +46,7 @@ from src.config import (
     setup_logging,
 )
 from src.deduplication import deduplicate
+from src.keepalive import hooks_from_env, run_loop
 from src.reporter import RunSummary, render_markdown, render_telegram, write_report
 from src.scanner import Scanner, ScanError
 from src.smm_client import SMMClient, SMMError, summarize_service
@@ -51,18 +61,81 @@ log = logging.getLogger("x_daily")
 WINDOW_RESCAN_INTERVAL = timedelta(hours=24)
 
 
-SCAN_INTERVAL_TOLERANCE = timedelta(minutes=20)  # scheduled runs start late and unevenly
+SCAN_INTERVAL_TOLERANCE = timedelta(minutes=20)  # a cycle this close to the next scan does the scan too
+SCAN_RETRY_DELAY = timedelta(minutes=30)  # pause before repeating a scan that failed
+SCAN_FAILURE_REMINDER_EVERY = 8  # of a row of failed scans, only the 1st, 8th, 16th... send a message
+STUCK_RETRY_DELAY = timedelta(minutes=30)  # how long to leave an overdue item the last cycle could not move
+
+
+def _parse_time(value: Any) -> Optional[datetime]:
+    try:
+        return parse_iso_datetime(value) if value else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _last_scan_failed(state: dict[str, Any]) -> bool:
+    last_ok = _parse_time(state.get("last_successful_scan_at"))
+    last_try = _parse_time(state.get("last_scan_attempt_at"))
+    return last_try is not None and (last_ok is None or last_try > last_ok)
+
+
+def _next_scan_time(state: dict[str, Any], config: Config) -> Optional[datetime]:
+    """When the next X scan is planned, or None if it should happen straight away."""
+    if _last_scan_failed(state):
+        return _parse_time(state.get("last_scan_attempt_at")) + SCAN_RETRY_DELAY  # type: ignore[operator]
+    last_ok = _parse_time(state.get("last_successful_scan_at"))
+    if last_ok is None:
+        return None
+    return last_ok + timedelta(hours=max(config.scan_interval_hours, 1))
 
 
 def _scan_due(state: dict[str, Any], config: Config, now: datetime) -> bool:
-    """Runs come more often than scans; in-between runs only place orders that are due."""
-    last = state.get("last_successful_scan_at")
-    if config.force_scan or config.scan_since_override or not config.scan_interval_hours or not last:
+    """Cycles come more often than scans; in-between cycles only place orders that are due."""
+    if config.force_scan or config.scan_since_override or not config.scan_interval_hours:
         return True
+    planned = _next_scan_time(state, config)
+    if planned is None:
+        return True
+    return now >= (planned if _last_scan_failed(state) else planned - SCAN_INTERVAL_TOLERANCE)
+
+
+def _posted_recently(posts: dict[str, Any], config: Config, now: datetime) -> bool:
+    cutoff = now - timedelta(hours=config.keep_alive_after_post_hours)
+    found = (_parse_time(post.get("discovered_at")) for post in posts.values())
+    return any(when is not None and when > cutoff for when in found)
+
+
+def next_wake(config: Config, now: datetime) -> Optional[datetime]:
+    """When the bot next has something to do, or None if the process can stop.
+
+    KEEP_ALIVE=auto keeps it running while split view orders are waiting, and
+    for KEEP_ALIVE_AFTER_POST_HOURS after the latest new post so that the next
+    one is found by a scan on time rather than whenever GitHub starts a run.
+    KEEP_ALIVE=always keeps it running regardless.
+    """
+    if config.keep_alive == "off" or config.dry_run:
+        return None
     try:
-        return now - parse_iso_datetime(last) >= timedelta(hours=config.scan_interval_hours) - SCAN_INTERVAL_TOLERANCE
-    except (TypeError, ValueError):
-        return True
+        bot_state = StateStore(config.data_dir).load()
+    except StateError as exc:
+        log.error("%s", exc)
+        return None
+    state = bot_state.state
+    ordering = config.smm_enabled and config.smm_auto_order
+    order_wake = next_view_order_wake(bot_state.campaigns["plans"]) if ordering else None
+    if order_wake is None and config.keep_alive != "always":
+        if not _posted_recently(bot_state.posts["posts"], config, now):
+            return None
+    scan_wake = _next_scan_time(state, config) or now
+    wake = scan_wake if order_wake is None else min(order_wake, scan_wake)
+
+    last_run = state.get("last_run") or {}
+    last_started = _parse_time(last_run.get("started_at"))
+    if last_started and wake <= last_started and not last_run.get("orders_placed") and not last_run.get("new_posts"):
+        # The cycle that just ran could have dealt with this and did not; do not spin on it.
+        wake = now + STUCK_RETRY_DELAY
+    return wake
 
 
 def _since_id(state: dict[str, Any], config: Config, now: datetime) -> Optional[str]:
@@ -136,6 +209,7 @@ def _run_locked(
         if not scan_due:
             summary.scan_status = "SKIPPED"
             raise _ScanSkipped
+        state["last_scan_attempt_at"] = format_iso(now)
         since_id = _since_id(state, config, now)
         result = Scanner(x_client, config).scan(
             state.get("account"), state.get("last_successful_scan_at"), now, since_id=since_id
@@ -208,6 +282,8 @@ def _run_locked(
     _smm_checks(config, summary, posts, plans, [p.post_id for p in new_posts], now, smm_client)
 
     # 5. Persist. The checkpoint is written last and only after a complete scan.
+    if scan_due:
+        state["scan_failures"] = 0 if scan_ok else int(state.get("scan_failures") or 0) + 1
     if scan_ok:
         state["last_successful_scan_at"] = format_iso(now)
         state["last_scan_window_start"] = summary.window_start
@@ -237,7 +313,15 @@ def _run_locked(
         path = write_report(config.reports_dir, summary, markdown)
         log.info("Report written to %s", path)
 
-    worth_a_message = bool(summary.new_posts or summary.errors or summary.scan_status in ("FAILED", "INCOMPLETE"))
+    # Messages go out for news, not for every cycle: new posts, a post's views all ordered,
+    # and problems. A scan that keeps failing is repeated only now and then.
+    scan_failed = summary.scan_status in ("FAILED", "INCOMPLETE")  # each adds exactly one error above
+    failures = int(state.get("scan_failures") or 0)
+    repeat_failure = scan_failed and failures > 1 and failures % SCAN_FAILURE_REMINDER_EVERY != 0
+    other_errors = len(summary.errors) - (1 if scan_failed else 0)
+    worth_a_message = bool(
+        summary.new_posts or summary.views_completed or other_errors > 0 or (scan_failed and not repeat_failure)
+    )
     if config.telegram_enabled and not config.dry_run and not worth_a_message:
         summary.telegram_status = "not sent (nothing new)"
         write_report(config.reports_dir, summary, render_markdown(summary, config, posts, plans))
@@ -312,16 +396,18 @@ def _smm_checks(
         except SMMError as exc:
             summary.warnings.append(f"SMM panel service metadata unavailable: {exc}")
 
-    # Auto-ordering: likes at once and a split view schedule for new posts, then whatever
-    # view orders have come due (from this run's posts and earlier ones).
+    # Auto-ordering: likes at once and a split view schedule for new posts, then the view
+    # orders whose turn has come (from this cycle's posts and earlier ones).
     if config.smm_auto_order and not config.dry_run:
         if new_post_ids:
-            summary.orders_placed.extend(
-                auto_place_orders(new_post_ids, posts, plans, config, smm_client, now, view_limits)
-            )
-        placed, problems = place_due_view_orders(plans, config, smm_client, now)
-        summary.orders_placed.extend(placed)
-        summary.errors.extend(problems)
+            placed, problems = auto_place_orders(new_post_ids, posts, plans, config, smm_client, now, view_limits)
+            summary.orders_placed.extend(placed)
+            summary.errors.extend(problems)
+        outcome = place_due_view_orders(plans, config, smm_client, now)
+        summary.orders_placed.extend(outcome.placed)
+        summary.errors.extend(outcome.problems)
+        summary.warnings.extend(outcome.notes)
+        summary.views_completed = outcome.completed
 
     campaign_summary = refresh_campaign_statuses(plans, {config.smm_provider: SMMStatusProvider(smm_client, config.smm_provider)}, now)
     summary.campaigns_checked = campaign_summary["checked"]
@@ -353,8 +439,23 @@ def main() -> int:
         log.error("%s", exc)
         return 2
     setup_logging(config)
+    hooks = hooks_from_env(os.environ)
+
+    def cycle(first: bool) -> int:
+        # What a manual run asks for (forced scan, recovery scan, state re-init) applies once.
+        later = replace(config, force_scan=False, scan_since_override=None, allow_state_reinit=False)
+        return run(config if first else later)
+
     try:
-        return run(config)
+        if config.dry_run:
+            code = run(config)
+            # A dry run saves nothing, so anything still scheduled needs a real run to follow it.
+            if next_wake(replace(config, dry_run=False), _now()) is not None:
+                hooks.hand_over()
+            return code
+        return run_loop(
+            cycle, lambda now: next_wake(config, now), hooks, config.keep_alive_minutes, clock=_now, sleep=time.sleep
+        )
     except PersistenceError as exc:
         log.error("%s", exc)
         return 1

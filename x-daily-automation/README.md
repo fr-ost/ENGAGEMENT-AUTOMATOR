@@ -1,6 +1,6 @@
 # X Daily Automation
 
-A small Python bot that runs **every hour** on **GitHub Actions** and scans X **every 2 hours**. It:
+A small Python bot that runs on **GitHub Actions**, scans X **every 2 hours**, and keeps itself running while it has orders to place. It:
 
 1. finds your new X posts with the **official X API v2** (no scraping),
 2. deduplicates them by post ID and saves them to JSON files in this repo,
@@ -37,40 +37,54 @@ A small Python bot that runs **every hour** on **GitHub Actions** and scans X **
 ## How it works
 
 ```
-GitHub Actions (hourly, or manual)
+GitHub Actions run (started by the schedule, by hand, or by the previous run handing over)
   └─ pytest (offline, mocked)        ← the bot does not run if tests fail
-  └─ python main.py
+  └─ python main.py                  ← repeats the cycle below for as long as there is work
        1. load + validate config     (exit 2 on bad config)
        2. lock + load JSON state     (exit 3 if corrupt or locked; nothing is reset)
        3. X API: user timeline, only posts newer than the last one seen
           (skipped if the last scan was under SCAN_INTERVAL_HOURS ago)
        4. dedupe by post ID → save new posts + planning records
        5. refresh public metrics (only if METRICS_LOOKBACK_DAYS > 0)
-       6. SMM panel checks + auto-orders (optional; failures are only warnings)
+       6. SMM panel: likes for new posts, and the view orders whose time has come
        7. save state; the checkpoint is written LAST and only after a complete scan
-       8. write reports/YYYY-MM-DD.md, then send Telegram (optional; failures never fail the run)
-  └─ commit data/ + reports/ (only if changed; rebase on conflict, never force-push)
+       8. write reports/YYYY-MM-DD.md, then send Telegram if there is news
+       9. commit data/ + reports/ and push (rebase if the branch moved, never force-push)
+      10. sleep until the next view order or scan is due, then go back to 1
 ```
+
+**Why the run stays alive.** GitHub's scheduler is not a clock: in this repository scheduled runs have started 3–7 hours late, and an hourly schedule produced a run only every few hours. Orders that must go out at particular times therefore cannot wait for "the next run". Instead, a run that has something scheduled keeps going (`src/keepalive.py`):
+
+- it sleeps until the next view order or the next X scan is due, does that cycle, saves, and sleeps again;
+- after 5 h 20 min it starts a fresh run and exits, because GitHub ends any job at 6 hours;
+- every two minutes it checks whether another run is waiting (a manual *Run workflow*, or a scheduled one) and, if so, exits so that one can take over — a manual run never waits long;
+- if the code on the branch changes, it hands over to a fresh run so the new code is used;
+- it stops by itself when there is nothing left to wait for. With the default `KEEP_ALIVE=auto` that is when no view orders are waiting **and** no new post has been found for `KEEP_ALIVE_AFTER_POST_HOURS` (24). After that, the next post is picked up whenever GitHub next starts a scheduled run, which can be hours.
+
+The schedule in the workflow file is now only the starter: it gets the bot going again after a quiet period or after a run died.
 
 **Checkpoint safety.** `data/state.json` → `last_successful_scan_at` moves forward only when the whole scan succeeded **and** the posts/plans were written to disk. If the scan fails, is cut short, or saving fails, the previous checkpoint stays and the next run covers the gap. Running the bot twice in a row is harmless: known posts are dropped by post ID.
 
 **Each post is read once.** Normal scans ask X only for posts newer than the newest one already seen (`last_seen_post_id` in `data/state.json`), so a scan that finds nothing reads no posts, and scanning more often does not read more. Once every 24 hours one scan instead re-checks a time window going back `SCAN_OVERLAP_HOURS` before the previous scan, to catch a post X indexed late; that re-reads the few posts in that window. The first run and `scan_since` recovery runs also use a time window.
 
-**Overlapping runs.** The workflow uses a `concurrency` group, so only one run happens at a time. Local runs also take a lock file, `data/.run.lock`.
+**Overlapping runs.** The workflow uses a `concurrency` group, so only one run happens at a time; a second one waits, and the running one steps aside for it within about two minutes. Local runs also take a lock file, `data/.run.lock`.
 
 ## Project layout
 
 ```
 .github/workflows/daily.yml      ← at the REPO ROOT (GitHub only reads workflows there)
+.github/scripts/persist-state.sh ← commits and pushes data/ and reports/ after every cycle
 x-daily-automation/
-├── main.py                      orchestrates one daily run
+├── main.py                      one scan/order cycle, and when the next one is due
 ├── src/
 │   ├── config.py                env config, validation, secret-redacting logs, .env loader
 │   ├── x_client.py              X API v2 client (retries, timeouts, rate limits)
 │   ├── scanner.py               scan window, filtering (replies/reposts/quotes), canonical URLs
 │   ├── deduplication.py         dedupe by immutable post ID
+│   ├── keepalive.py             keeps a run alive between cycles; hand-over to the next run
+│   ├── order_planner.py         splits a view total into uneven orders at spread-out times
 │   ├── storage.py               atomic JSON writes, validation, lock, recovery
-│   ├── campaign_manager.py      planning records, metrics progress, read-only campaign status
+│   ├── campaign_manager.py      planning records, like orders, split view orders, order status
 │   ├── smm_client.py            SMM panel API v2 client (balance/services/status/add)
 │   ├── reporter.py              Markdown report + Telegram text
 │   └── telegram.py              Telegram sender (splitting, retries)
@@ -180,16 +194,18 @@ The panel integration is **off by default**, and the bot works fully without it.
 ### How orders are placed
 
 - **Likes: one order**, placed in the run that discovers the post.
-- **Views: split.** The target is divided into `VIEW_SPLIT_MIN`–`VIEW_SPLIT_MAX` (default 10–12) uneven orders that add up exactly to `IMPRESSION_TARGET`, e.g. 5,000 → 381, 523, 447, … The first is placed straight away; the rest come due roughly an hour apart over `VIEW_SPREAD_HOURS` (default 12). Each hourly run places the ones that are due — normally one per post, two if a run was late or skipped.
+- **Views: split.** The target is divided into `VIEW_SPLIT_MIN`–`VIEW_SPLIT_MAX` (default 10–12) uneven orders that add up exactly to `IMPRESSION_TARGET`, e.g. 4,000 → 353, 376, 291, … The first is placed straight away; each of the others has its own time, roughly an hour apart, with the last one about 11 hours after the first (`VIEW_SPREAD_HOURS`, default 12). The run stays alive and places each order when its time comes, one order per post at a time.
 - If the target is too small for that many orders (each must be at least the service minimum), fewer orders are used.
 - The schedule is stored per post in `data/campaigns.json` under `view_schedule`, and the report shows a "Split view orders in progress" table.
-- Completion depends on GitHub starting the hourly runs. They usually start 5–30 minutes late and are occasionally skipped, so the last slice can land somewhat after the 12-hour mark. How fast each slice is *delivered* is up to the panel service.
+- If the bot was not running when orders came due (a run died, GitHub was down), it catches up when it is next started: the overdue orders of a post go out 10 minutes apart, never together.
+- You get one Telegram message when a post is found and one when its views are fully ordered — not one per order.
+- How fast each order is *delivered* after it is placed is up to the panel service.
 
 Safety properties of auto-ordering:
 
 - One order per type per post. The order ID is saved in `data/campaigns.json`, and reruns never re-order a post that already has one.
 - Dry runs never place orders.
-- A rejected **view** order (low balance, quantity out of range) is reported, stays queued, and is tried again on the next runs, three times in all. A rejected **likes** order is recorded as an error on that post and not retried.
+- A rejected **view** order (low balance, quantity out of range) is reported once, and the post's view orders are tried again every 30 minutes — so after you top up the balance they carry on by themselves. The bot gives up on a post's remaining view orders 12 hours after they should have finished. A rejected **likes** order is reported and not retried.
 - If the panel gives no clear answer (timeout, server error), the order is **never retried**, because it may already exist and a retry would pay twice. The report tells you to check the panel.
 - To turn it off, set `SMM_AUTO_ORDER=false` (or delete the variable). This also stops view orders that are still queued.
 
@@ -215,7 +231,7 @@ Each run then fetches the read-only status and the provider-reported charge, whi
    - *Workflow permissions*: the workflow requests `contents: write` itself. If your organization forces read-only tokens, select **Read and write permissions** so the bot can commit `data/` and `reports/`.
 3. Make sure the workflow file is on the **default branch**. Schedules only fire from there.
 
-**About timing:** GitHub runs scheduled workflows on a best-effort basis. Runs often start a few minutes, and sometimes 30+ minutes, after the scheduled time (minute 17 of every hour, UTC). During heavy load a run can occasionally be skipped. On public repos, GitHub automatically disables scheduled workflows after 60 days without repository activity, and the bot's own commits count as activity. The saved last-seen post means a late or skipped run never loses posts. The next run picks them up.
+**About timing:** GitHub starts scheduled workflows on a best-effort basis; in this repository that has meant hours late, with most hourly slots skipped. The bot only needs the schedule to get started: once a run is going it keeps its own time (see [How it works](#how-it-works)). In the Actions tab a run that shows *In progress* for hours is normal, and so is an occasional *Cancelled* run (a queued run that was replaced by a newer one). On public repos, GitHub disables scheduled workflows after 60 days without repository activity; the bot's own commits count as activity.
 
 ## 7. Run the workflow manually
 
@@ -276,7 +292,8 @@ For more detail, set the variable `LOG_LEVEL=DEBUG`.
 
 ## 11. Disabling the automation
 
-- **Pause:** repo → **Actions** → **X daily automation** → **⋯** → **Disable workflow**. Enable it again from the same menu.
+- **Pause:** repo → **Actions** → **X daily automation** → **⋯** → **Disable workflow**, then open the run that is *In progress* and press **Cancel workflow run** (a run that is already going is not stopped by disabling the workflow). Enable the workflow again from the same menu.
+- **Stop ordering only:** set the variable `SMM_AUTO_ORDER=false` and press **Run workflow**; the new run starts with the new setting, and queued view orders are left unplaced.
 - **Stop permanently:** delete `.github/workflows/daily.yml` and commit.
 - **Revoke access:** regenerate or delete the Bearer Token in the X developer portal, and delete the repository secrets.
 
@@ -284,7 +301,7 @@ For more detail, set the variable `LOG_LEVEL=DEBUG`.
 
 | Item | Cost |
 | --- | --- |
-| GitHub Actions | Public repos: free for standard runners. Private repos: covered by your plan's included minutes; GitHub Free currently includes 2,000 minutes per month. Each run takes about 1 minute, so 24 runs a day is roughly 720 minutes per month. |
+| GitHub Actions | **Public repos: free** for standard runners. **Private repos: expensive with keep-alive** — a run that stays alive uses a minute of your allowance per minute, up to about 1,400 a day, against 2,000–3,000 included per month. In a private repo set `KEEP_ALIVE=off` (orders then go out only when GitHub starts a run) or trigger the workflow from an external scheduler. |
 | Storage | JSON and Markdown in git: a few KB per day. |
 | Telegram | Free. |
 | X API | **Depends on your developer plan. Check it yourself.** X's tiers and prices have changed repeatedly, and this project does not assume any reads are free. |
@@ -292,11 +309,11 @@ For more detail, set the variable `LOG_LEVEL=DEBUG`.
 
 **X API usage per day** (typical):
 
-- 12 timeline requests, one per scan (the hourly runs in between do not call X)
+- at most 12–14 timeline requests, one per scan (the cycles in between, which only place orders, do not call X)
 - 1 user lookup, on the first run only
 - posts read: each new post once, plus the few posts inside the once-a-day safety window
 
-On per-post-read pricing the cost therefore follows how much you post, not how often the bot scans. Whether a request that returns no posts is billed depends on your X plan; check your developer console after the first day. Setting `METRICS_LOOKBACK_DAYS` above `0` adds one lookup per run that re-reads every post that recent, 12 times a day. Every report lists the exact request and post-read counts. To have reports estimate a dollar cost, set `X_COST_PER_REQUEST_USD` and/or `X_COST_PER_POST_READ_USD` using prices **you have confirmed for your plan**. Otherwise the report says the cost is unknown.
+On per-post-read pricing the cost therefore follows how much you post, not how often the bot scans. Whether a request that returns no posts is billed depends on your X plan; check your developer console after the first day. Setting `METRICS_LOOKBACK_DAYS` above `0` adds one lookup per scan that re-reads every post that recent, 12 times a day. Every report lists the exact request and post-read counts. To have reports estimate a dollar cost, set `X_COST_PER_REQUEST_USD` and/or `X_COST_PER_POST_READ_USD` using prices **you have confirmed for your plan**. Otherwise the report says the cost is unknown.
 
 ---
 
@@ -319,7 +336,9 @@ Long reports are split into several messages under Telegram's 4,096-character li
 | `INCLUDE_QUOTE_POSTS` | `true` | Include quote posts. Replies and reposts are always excluded. |
 | `X_PAGE_SIZE` | `100` | Posts per page (5–100). |
 | `X_MAX_PAGES` | `5` | Page cap per scan; hitting it marks the scan INCOMPLETE. |
-| `SCAN_INTERVAL_HOURS` | `2` | Minimum time between X scans. Hourly runs in between only place due orders. Manual runs always scan. |
+| `SCAN_INTERVAL_HOURS` | `2` | Time between X scans. Cycles in between only place due orders. Manual runs always scan. |
+| `KEEP_ALIVE` | `auto` | `auto`: the run stays alive while view orders wait and for a while after the latest new post. `always`: it never stops by itself. `off`: one cycle per run, as GitHub starts them. |
+| `KEEP_ALIVE_AFTER_POST_HOURS` | `24` | In `auto` mode, how long after the latest new post the bot keeps running (and scanning on time). `0` = only while view orders wait. |
 | `SCAN_OVERLAP_HOURS` | `2` | How far the once-a-day safety scan reaches back before the previous scan. |
 | `INITIAL_LOOKBACK_HOURS` | `24` | First-run window. |
 | `METRICS_LOOKBACK_DAYS` | `0` | Refresh metrics for posts this recent on every run. Off by default; costs post reads. |
@@ -331,7 +350,7 @@ Long reports are split into several messages under Telegram's 4,096-character li
 | `SMM_ENABLED` | `false` | Enable the SMM panel (balance, services, order status). |
 | `SMM_AUTO_ORDER` | `false` | Place orders for each new post. **Spends money.** |
 | `VIEW_SPLIT_MIN` / `VIEW_SPLIT_MAX` | `10` / `12` | How many orders the views are split into. Set both to `1` for a single order. |
-| `VIEW_SPREAD_HOURS` | `12` | Time over which the view orders are placed. |
+| `VIEW_SPREAD_HOURS` | `12` | Time over which a post's view orders are placed. |
 | `SMM_API_URL` | `https://bulkfollows.com/api/v2` | Set only to use another v2-compatible panel. |
 | `SMM_API_KEY` | — | **Secret.** |
 | `SMM_IMPRESSION_SERVICE_ID` / `SMM_LIKE_SERVICE_ID` | — | Panel service IDs used for metadata and auto-orders. |

@@ -5,7 +5,7 @@ SMM_AUTO_ORDER=true the bot orders for each newly discovered post:
 
   * likes   - one order, straight away
   * views   - split into several uneven orders (the plan's "view_schedule"),
-              placed one or two per run until the total is reached
+              placed one at a time as each comes due, until the total is reached
 
 Every placed order is recorded in the plan's "authorized_campaigns" list.
 
@@ -21,7 +21,8 @@ from __future__ import annotations
 
 import logging
 import random
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Protocol
 
 from .config import Config, format_iso, parse_iso_datetime
@@ -46,9 +47,13 @@ PROMO_TARGETS_REACHED = "TARGETS_REACHED"
 # Panel order states that never change again; no point asking about them every run.
 FINAL_ORDER_STATUSES = {"completed", "partial", "canceled", "cancelled", "refunded"}
 
-MAX_SPLIT_ATTEMPTS = 3  # rejected view orders are retried on later runs this many times
-MAX_SPLITS_PER_RUN = 2  # per post: normally one is due; two lets a late run catch up
 DEFAULT_VIEW_LIMITS = (100, 10**9)  # used when the panel's service list is unavailable
+
+# Split view orders
+MIN_VIEW_ORDER_GAP = timedelta(minutes=10)  # a post never gets two view orders closer than this, even when catching up
+VIEW_RETRY_DELAY = timedelta(minutes=30)  # pause before trying a post's view orders again after a failure
+VIEW_GIVE_UP_AFTER = timedelta(hours=12)  # stop retrying this long after the schedule was meant to finish
+MAX_UNCLEAR_ATTEMPTS = 2  # an order with no clear answer is tried once more, then left as 'unknown'
 
 
 class CampaignStatusProvider(Protocol):
@@ -229,18 +234,20 @@ def auto_place_orders(
     now: datetime,
     view_limits: tuple[int, int] = DEFAULT_VIEW_LIMITS,
     rng: Optional[random.Random] = None,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], list[str]]:
     """Start ordering for newly discovered posts (SMM_AUTO_ORDER=true).
 
     Likes are placed now as a single order. Views are only *scheduled* here, as
     a set of split orders; place_due_view_orders() places them as they come due.
     Types already ordered or scheduled are skipped, so reruns are idempotent.
-    Failures are stored in the plan's 'errors' list and never propagate.
+    Failures never propagate: they are stored in the plan's 'errors' list and
+    returned so the owner can be told.
 
-    Returns the like orders placed (post_id, type, order_id, quantity).
+    Returns (like orders placed as post_id/type/order_id/quantity, problems).
     """
     stamp = format_iso(now)
     results: list[dict[str, Any]] = []
+    problems: list[str] = []
 
     for post_id in new_post_ids:
         plan = plans.get(post_id)
@@ -258,6 +265,7 @@ def auto_place_orders(
             except ValueError as exc:
                 msg = f"Views not scheduled for post {post_id}: {exc}"
                 plan.setdefault("errors", []).append(msg)
+                problems.append(msg)
                 log.warning("%s", msg)
 
         likes = int(targets.get("likes", 0))
@@ -266,8 +274,9 @@ def auto_place_orders(
             try:
                 result = smm_client.place_order(service_id, post.get("post_url", ""), likes)
             except (SMMError, ValueError) as exc:
-                msg = f"Auto-order failed (likes for post {post_id}): {exc}"
+                msg = f"Likes order failed ({likes:,} for post {post_id}): {exc} - not retried"
                 plan.setdefault("errors", []).append(msg)
+                problems.append(msg)
                 log.warning("%s", msg)
             else:
                 plan.setdefault("authorized_campaigns", []).append(
@@ -277,7 +286,7 @@ def auto_place_orders(
                 log.info("Placed likes order %s for post %s (qty=%d)", result.order_id, post_id, likes)
         plan["updated_at"] = stamp
 
-    return results
+    return results, problems
 
 
 def _campaign_entry(config: Config, reference: str, stamp: str, service_id: str, kind: str, quantity: int) -> dict[str, Any]:
@@ -308,7 +317,6 @@ def schedule_view_orders(
                 "quantity": quantity,
                 "due_at": format_iso(datetime.fromtimestamp(due, timezone.utc)),
                 "status": "pending",  # pending | placed | failed | unknown
-                "attempts": 0,
             }
             for quantity, due in zip(quantities, times)
         ],
@@ -316,65 +324,140 @@ def schedule_view_orders(
     return plan["view_schedule"]
 
 
+def _pending_orders(schedule: dict[str, Any]) -> list[tuple[int, dict[str, Any]]]:
+    """(1-based position, order) for every order still waiting, earliest due first."""
+    waiting = [
+        (index, order)
+        for index, order in enumerate(schedule.get("orders") or [], start=1)
+        if order.get("status") == "pending"
+    ]
+    return sorted(waiting, key=lambda item: parse_iso_datetime(item[1]["due_at"]))
+
+
+def next_view_order_time(plan: dict[str, Any]) -> Optional[datetime]:
+    """When this post's next split view order should be placed, or None if none is waiting."""
+    schedule = plan.get("view_schedule")
+    if not isinstance(schedule, dict):
+        return None
+    pending = _pending_orders(schedule)
+    if not pending:
+        return None
+    when = parse_iso_datetime(pending[0][1]["due_at"])
+    placed_at = [
+        parse_iso_datetime(order["placed_at"])
+        for order in schedule["orders"]
+        if order.get("status") == "placed" and order.get("placed_at")
+    ]
+    if placed_at:
+        when = max(when, max(placed_at) + MIN_VIEW_ORDER_GAP)
+    if schedule.get("retry_after"):
+        when = max(when, parse_iso_datetime(schedule["retry_after"]))
+    return when
+
+
+def next_view_order_wake(plans: dict[str, Any]) -> Optional[datetime]:
+    """The earliest moment any post needs a view order placed, or None if nothing is waiting."""
+    times = [when for when in (next_view_order_time(plan) for plan in plans.values()) if when is not None]
+    return min(times) if times else None
+
+
+@dataclass
+class ViewOrderOutcome:
+    placed: list[dict[str, Any]] = field(default_factory=list)  # post_id, type, order_id, quantity
+    problems: list[str] = field(default_factory=list)  # worth telling the owner about
+    notes: list[str] = field(default_factory=list)  # repeats of a problem already reported
+    completed: list[dict[str, Any]] = field(default_factory=list)  # posts whose last view order was just placed
+
+
 def place_due_view_orders(
     plans: dict[str, Any], config: Config, smm_client: SMMClient, now: datetime
-) -> tuple[list[dict[str, Any]], list[str]]:
-    """Place the scheduled view orders that have come due. Returns (placed, problems).
+) -> ViewOrderOutcome:
+    """Place the next split view order of every post whose turn has come: one per post per call.
 
-    A rejected order stays pending and is tried again on later runs, up to
-    MAX_SPLIT_ATTEMPTS. An order with no clear answer is marked 'unknown' and
-    never retried, because it may already exist on the panel.
+    When an order fails, the post's remaining view orders wait VIEW_RETRY_DELAY:
+      * rejected by the panel (definitely not placed): tried again until
+        VIEW_GIVE_UP_AFTER past the schedule's planned end, so a top-up of the
+        panel balance lets the post carry on;
+      * no clear answer (it may or may not exist): tried once more, then left
+        as 'unknown', so a broken panel response can never multiply an order.
+    Only the first failure in a row and a final give-up are 'problems'; the
+    retries in between are 'notes'.
     """
+    outcome = ViewOrderOutcome()
     stamp = format_iso(now)
-    placed: list[dict[str, Any]] = []
-    problems: list[str] = []
     for post_id, plan in plans.items():
-        schedule = plan.get("view_schedule")
-        if not isinstance(schedule, dict):
+        when = next_view_order_time(plan)
+        if when is None or when > now:
             continue
-        orders = schedule.get("orders", [])
-        due = [
-            (index, order)
-            for index, order in enumerate(orders, start=1)
-            if order.get("status") == "pending" and parse_iso_datetime(order["due_at"]) <= now
-        ]
-        for index, order in due[:MAX_SPLITS_PER_RUN]:
-            label = f"views {index}/{len(orders)}"
-            quantity, service_id = int(order["quantity"]), str(schedule["service_id"])
-            plan["updated_at"] = stamp
-            try:
-                result = smm_client.place_order(service_id, plan["post_url"], quantity)
-            except SMMRejected as exc:
-                order["attempts"] = int(order.get("attempts", 0)) + 1
-                order["error"] = str(exc)
-                gave_up = order["attempts"] >= MAX_SPLIT_ATTEMPTS
-                if gave_up:
-                    order["status"] = "failed"
-                problem = (
-                    f"View order rejected ({label}, {quantity:,} for post {post_id}): {exc}"
-                    + (" - giving up on this one" if gave_up else " - will retry next run")
-                )
-                problems.append(problem)
-                log.warning("%s", problem)
-                break  # the next split for this post would be rejected for the same reason
-            except (SMMError, ValueError) as exc:
-                order["status"] = "unknown"
-                order["error"] = str(exc)
-                problem = (
-                    f"View order outcome unknown ({label}, {quantity:,} for post {post_id}): {exc}"
-                    " - not retried; check the panel's order list"
-                )
-                problems.append(problem)
-                plan.setdefault("errors", []).append(problem)
-                log.warning("%s", problem)
-            else:
-                order.update(status="placed", reference=result.order_id, placed_at=stamp, error=None)
-                entry = _campaign_entry(config, result.order_id, stamp, service_id, "impressions", quantity)
-                entry["split"] = f"{index}/{len(orders)}"
-                plan.setdefault("authorized_campaigns", []).append(entry)
-                placed.append({"post_id": post_id, "type": label, "order_id": result.order_id, "quantity": quantity})
-                log.info("Placed %s order %s for post %s (qty=%d)", label, result.order_id, post_id, quantity)
-    return placed, problems
+        schedule = plan["view_schedule"]
+        index, order = _pending_orders(schedule)[0]
+        label = f"views {index}/{len(schedule['orders'])}"
+        quantity, service_id = int(order["quantity"]), str(schedule["service_id"])
+        plan["updated_at"] = stamp
+        try:
+            result = smm_client.place_order(service_id, plan["post_url"], quantity)
+        except (SMMError, ValueError) as exc:
+            _view_order_failed(post_id, plan, order, label, exc, config, now, outcome)
+            continue
+        order.update(status="placed", reference=result.order_id, placed_at=stamp, error=None)
+        schedule["failures"] = 0
+        schedule.pop("retry_after", None)
+        entry = _campaign_entry(config, result.order_id, stamp, service_id, "impressions", quantity)
+        entry["split"] = f"{index}/{len(schedule['orders'])}"
+        plan.setdefault("authorized_campaigns", []).append(entry)
+        outcome.placed.append({"post_id": post_id, "type": label, "order_id": result.order_id, "quantity": quantity})
+        log.info("Placed %s order %s for post %s (qty=%d)", label, result.order_id, post_id, quantity)
+        progress = view_schedule_progress(plan)
+        if progress and not progress["pending_orders"]:
+            outcome.completed.append({"post_id": post_id, "post_url": plan["post_url"], **progress})
+    return outcome
+
+
+def _view_order_failed(
+    post_id: str,
+    plan: dict[str, Any],
+    order: dict[str, Any],
+    label: str,
+    exc: Exception,
+    config: Config,
+    now: datetime,
+    outcome: ViewOrderOutcome,
+) -> None:
+    schedule = plan["view_schedule"]
+    definite = isinstance(exc, (SMMRejected, ValueError))  # the panel said no, or it was never sent
+    schedule["failures"] = int(schedule.get("failures", 0)) + 1
+    order["error"] = str(exc)
+    if not definite:
+        order["unclear"] = int(order.get("unclear", 0)) + 1
+    what = f"{label}, {int(order['quantity']):,} for post {post_id}"
+    planned_end = parse_iso_datetime(schedule["created_at"]) + timedelta(hours=config.view_spread_hours)
+
+    if now >= planned_end + VIEW_GIVE_UP_AFTER:
+        waiting = [o for _, o in _pending_orders(schedule)]
+        for other in waiting:
+            other["status"] = "failed"
+        problem = (
+            f"View order failed ({what}): {exc} - giving up on this post's remaining "
+            f"{len(waiting)} view order(s), {sum(int(o['quantity']) for o in waiting):,} views"
+        )
+    elif not definite and order["unclear"] >= MAX_UNCLEAR_ATTEMPTS:
+        order["status"] = "unknown"
+        problem = (
+            f"View order outcome unknown ({what}): {exc} - no clear answer twice, "
+            "so it is not tried again; check the panel's order list"
+        )
+    else:
+        schedule["retry_after"] = format_iso(now + VIEW_RETRY_DELAY)
+        message = (
+            f"View order {'rejected' if definite else 'got no clear answer'} ({what}): {exc} - "
+            f"trying again in {int(VIEW_RETRY_DELAY.total_seconds() // 60)} min"
+        )
+        (outcome.problems if schedule["failures"] == 1 else outcome.notes).append(message)
+        log.warning("%s", message)
+        return
+    outcome.problems.append(problem)
+    plan.setdefault("errors", []).append(problem)
+    log.warning("%s", problem)
 
 
 def view_schedule_progress(plan: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -385,6 +468,7 @@ def view_schedule_progress(plan: dict[str, Any]) -> Optional[dict[str, Any]]:
     orders = schedule["orders"]
     done = [o for o in orders if o.get("status") == "placed"]
     pending = [o for o in orders if o.get("status") == "pending"]
+    next_time = next_view_order_time(plan)
     return {
         "total": schedule.get("total", 0),
         "orders": len(orders),
@@ -392,7 +476,8 @@ def view_schedule_progress(plan: dict[str, Any]) -> Optional[dict[str, Any]]:
         "placed_quantity": sum(int(o["quantity"]) for o in done),
         "pending_orders": len(pending),
         "problem_orders": len(orders) - len(done) - len(pending),
-        "next_due": min((o["due_at"] for o in pending), default=None),
+        "next_due": format_iso(next_time) if next_time else None,
+        "retrying": bool(pending and schedule.get("failures")),
     }
 
 

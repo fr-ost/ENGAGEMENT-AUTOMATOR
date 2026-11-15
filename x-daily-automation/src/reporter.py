@@ -39,6 +39,7 @@ class RunSummary:
     smm_balance: Optional[str] = None
     smm_services: list[dict[str, Any]] = field(default_factory=list)
     orders_placed: list[dict[str, Any]] = field(default_factory=list)
+    views_completed: list[dict[str, Any]] = field(default_factory=list)  # posts whose last view order went out
     campaigns_checked: int = 0
     verified_spend: dict[str, float] = field(default_factory=dict)
     telegram_status: str = "disabled"
@@ -64,6 +65,7 @@ class RunSummary:
             "scan_status": self.scan_status,
             "new_posts": len(self.new_posts),
             "duplicates_skipped": self.duplicates_skipped,
+            "orders_placed": len(self.orders_placed),
             "x_requests": self.x_requests,
             "errors": self.errors[:10],
         }
@@ -120,7 +122,7 @@ def render_markdown(summary: RunSummary, config: Config, posts: dict[str, Any], 
             lines.append(f"- [{post['post_id']}]({post['post_url']}) — created {_bd(post['created_at'])} ({post['kind']})")
     elif summary.scan_status == "SKIPPED":
         lines.append(
-            f"No scan this run: X is scanned every {config.scan_interval_hours}h. This run only placed orders that were due."
+            f"No scan this time: X is scanned every {config.scan_interval_hours}h. This cycle only placed orders that were due."
         )
     else:
         lines.append("No new posts were found in this scan." if summary.scan_status == "SUCCESS" else "No new posts recorded.")
@@ -143,9 +145,10 @@ def render_markdown(summary: RunSummary, config: Config, posts: dict[str, Any], 
         lines += ["| Post | Views ordered | Orders placed | Next order due |", "| --- | --- | --- | --- |"]
         for plan, p in sorted(active, key=lambda item: int(item[0]["post_id"]), reverse=True):
             note = f" ({p['problem_orders']} not placed)" if p["problem_orders"] else ""
+            due = _bd(p["next_due"]) + (" (retrying after a failure)" if p["retrying"] else "")
             lines.append(
                 f"| [{plan['post_id']}]({plan['post_url']}) | {p['placed_quantity']:,} / {p['total']:,} "
-                f"| {p['placed_orders']} / {p['orders']}{note} | {_bd(p['next_due'])} |"
+                f"| {p['placed_orders']} / {p['orders']}{note} | {due} |"
             )
         lines.append("")
 
@@ -241,6 +244,10 @@ def render_telegram(summary: RunSummary, config: Config) -> str:
         lines.append(f"Auto-orders placed: {len(summary.orders_placed)}")
         for o in summary.orders_placed:
             lines.append(f"  • {o['type']} order #{o['order_id']} — {o['quantity']:,} units")
+    for done in summary.views_completed:
+        lines.append(
+            f"Views fully ordered: {done['placed_quantity']:,} in {done['placed_orders']} orders — {done['post_url']}"
+        )
     if summary.smm_balance:
         lines.append(f"SMM panel balance ({config.smm_provider}): {summary.smm_balance}")
     lines.append(f"X API requests: {summary.x_requests}; duplicates skipped: {summary.duplicates_skipped}")

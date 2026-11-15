@@ -28,6 +28,19 @@ def test_smm_defaults_to_bulkfollows_and_derives_provider():
     assert other.smm_provider == "smmsoc"
 
 
+def test_keep_alive_setting():
+    assert load_config(base()).keep_alive == "auto"              # default: alive while there is work
+    assert load_config(base()).keep_alive_after_post_hours == 24.0
+    assert load_config(base(KEEP_ALIVE_AFTER_POST_HOURS="0")).keep_alive_after_post_hours == 0.0
+    assert load_config(base(KEEP_ALIVE="always")).keep_alive == "always"
+    assert load_config(base(KEEP_ALIVE="OFF")).keep_alive == "off"
+    assert load_config(base(KEEP_ALIVE="true")).keep_alive == "auto"
+    assert load_config(base(KEEP_ALIVE_MINUTES="320")).keep_alive_minutes == 320
+    assert load_config(base()).keep_alive_minutes == 0           # no limit unless the workflow sets one
+    with pytest.raises(ConfigError, match="KEEP_ALIVE"):
+        load_config(base(KEEP_ALIVE="sometimes"))
+
+
 def test_missing_required_values_listed_together():
     with pytest.raises(ConfigError) as excinfo:
         load_config({})

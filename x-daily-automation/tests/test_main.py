@@ -7,6 +7,8 @@ import pytest
 
 import main
 from src import storage
+from src.config import parse_iso_datetime
+from src.keepalive import Hooks, run_loop
 from src.smm_client import SMMClient
 from src.telegram import TelegramNotifier
 from src.x_client import XClient
@@ -346,84 +348,249 @@ def _fake_panel(mocked, reject_add=None):
     return placed
 
 
-def test_hourly_runs_scan_every_two_hours_and_drip_views_over_twelve_hours(mocked, make_config):
-    cfg = make_config(SMM_ENABLED="true", SMM_AUTO_ORDER="true", SMM_API_URL=SMM_URL, SMM_API_KEY="smm-key",
-                      SMM_IMPRESSION_SERVICE_ID="5", SMM_LIKE_SERVICE_ID="7", IMPRESSION_TARGET=5000,
-                      LIKE_TARGET=50, SCAN_INTERVAL_HOURS=2,
-                      TELEGRAM_ENABLED="true", TELEGRAM_BOT_TOKEN=TG_TOKEN, TELEGRAM_CHAT_ID="42")
-    one_post = [raw_post("1866000000000000001", "2026-10-26T16:30:00.000Z")]
-    link = "https://x.com/ExampleUser/status/1866000000000000001"
+class BotClock:
+    """Time for a simulated keep-alive run: it only moves when the loop sleeps."""
+
+    def __init__(self, start):
+        self.now = start
+
+    def clock(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += timedelta(seconds=seconds)
+
+
+def _keep_alive(cfg, clock, hooks=None, max_minutes=0, after_cycle=None):
+    """Drive real cycles through the real keep-alive loop.
+
+    Returns (exit code, [(start time, X API requests made)] for every cycle).
+    """
+    cycles = []
+
+    def cycle(first):
+        x = client()
+        smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
+        code = main.run(cfg, now=clock.clock(), x_client=x, smm_client=smm)
+        cycles.append((clock.clock(), x.request_count))
+        if after_cycle:
+            after_cycle(len(cycles))
+        return code
+
+    code = run_loop(
+        cycle, lambda now: main.next_wake(cfg, now), hooks or Hooks(), max_minutes, clock=clock.clock, sleep=clock.sleep
+    )
+    return code, cycles
+
+
+# KEEP_ALIVE_AFTER_POST_HOURS=0: these runs end as soon as the last view order is placed.
+ORDERING = dict(SMM_ENABLED="true", SMM_AUTO_ORDER="true", SMM_API_URL=SMM_URL, SMM_API_KEY="smm-key",
+                SMM_IMPRESSION_SERVICE_ID="5", SCAN_INTERVAL_HOURS=2, KEEP_ALIVE_AFTER_POST_HOURS=0)
+POST_ID = "1866000000000000001"
+LINK = f"https://x.com/ExampleUser/status/{POST_ID}"
+
+
+def _telegram_texts(mocked):
+    return [json.loads(c.request.body)["text"] for c in mocked.calls if "telegram" in c.request.url]
+
+
+def test_one_run_finds_a_post_then_stays_alive_and_places_every_view_order_on_time(mocked, make_config):
+    cfg = make_config(SMM_LIKE_SERVICE_ID="7", IMPRESSION_TARGET=4000, LIKE_TARGET=50,
+                      TELEGRAM_ENABLED="true", TELEGRAM_BOT_TOKEN=TG_TOKEN, TELEGRAM_CHAT_ID="42", **ORDERING)
     mocked.get(USER_URL, json=user_body())
-    mocked.get(TIMELINE_URL, json=timeline_body(one_post))
+    mocked.get(TIMELINE_URL, json=timeline_body([raw_post(POST_ID, "2026-10-26T16:30:00.000Z")]))
     mocked.post(TG_URL, json={"ok": True})
     placed = _fake_panel(mocked)
 
-    def run_at(hours):
-        """Run once and return how many X API requests that run made."""
-        smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
-        x = client()
-        assert main.run(cfg, now=NOW + timedelta(hours=hours), x_client=x, smm_client=smm) == 0
-        return x.request_count
+    def after_cycle(number):
+        if number == 1:                                                   # later scans find nothing new
+            mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
 
-    def timeline_calls():
-        return sum("/tweets" in c.request.url for c in mocked.calls)
+    # No scheduler, no second run: a single process started once, at discovery time.
+    code, cycles = _keep_alive(cfg, BotClock(NOW), after_cycle=after_cycle)
 
-    def telegram_texts():
-        return [json.loads(c.request.body)["text"] for c in mocked.calls if "telegram" in c.request.url]
+    assert code == 0
+    orders = read(cfg, "campaigns.json")["plans"][POST_ID]["view_schedule"]["orders"]
+    assert 10 <= len(orders) <= 12 and sum(o["quantity"] for o in orders) == 4000
+    assert all(o["status"] == "placed" for o in orders)
+    for order in orders:                                                  # each at its own planned time
+        lateness = parse_iso_datetime(order["placed_at"]) - parse_iso_datetime(order["due_at"])
+        assert timedelta(0) <= lateness <= timedelta(minutes=5)
+    assert len({o["placed_at"] for o in orders}) == len(orders)           # never two at the same moment
+    assert parse_iso_datetime(orders[-1]["placed_at"]) - NOW < timedelta(hours=12)   # 4,000 inside 12 hours
 
-    # Discovery run: likes in one shot, plus only the first slice of views.
-    run_at(0)
-    likes = [o for o in placed if o[0] == "7"]
-    views = [o for o in placed if o[0] == "5"]
-    assert likes == [("7", link, 50)]
-    assert len(views) == 1 and views[0][2] < 5000 / 5
-    schedule = read(cfg, "campaigns.json")["plans"]["1866000000000000001"]["view_schedule"]["orders"]
-    assert 10 <= len(schedule) <= 12 and sum(o["quantity"] for o in schedule) == 5000
-    assert "Views are ordered in 10-12 parts over 12h; likes at once." in telegram_texts()[0]
-    assert "Split view orders in progress" in report(cfg)
-
-    mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
-    scans_after_discovery = timeline_calls()
-
-    # One hour later: too soon to scan X again, but a view order is due.
-    x_calls_before = sum("api.x.com" in c.request.url for c in mocked.calls)
-    assert run_at(1) == 0                                                 # not a single X API request
-    assert sum("api.x.com" in c.request.url for c in mocked.calls) == x_calls_before
-    assert "| X API requests | 0 |" in report(cfg, "2026-10-27")
-    assert timeline_calls() == scans_after_discovery
-    assert read(cfg, "state.json")["last_successful_scan_at"] == "2026-10-26T17:00:00Z"
-    assert "No scan this run" in report(cfg, "2026-10-27")
-
-    x_requests = {hour: run_at(hour) for hour in range(2, 14)}
-    assert all(x_requests[hour] == 0 for hour in (3, 5, 7, 9, 11, 13))    # order-only runs never touch X
-    assert all(x_requests[hour] == 1 for hour in (2, 4, 6, 8, 10, 12))    # scan runs: one request, no posts read
+    assert [o for o in placed if o[0] == "7"] == [("7", LINK, 50)]        # likes: one order, never repeated
     views = [o[2] for o in placed if o[0] == "5"]
-    assert sum(views) == 5000 and len(views) == len(schedule)             # the whole total, in parts
-    assert len([o for o in placed if o[0] == "7"]) == 1                   # likes never repeated
-    assert timeline_calls() == scans_after_discovery + 6                  # hours 2, 4, ... 12
-    assert len(telegram_texts()) == 1                                     # no hourly spam
+    assert sum(views) == 4000 and len(views) == len(orders)
+    assert placed[0][0] == "7" or placed[1][0] == "7"                     # ...and in the very first cycle
+
+    # X is scanned about every 2 hours; the cycles that only place an order never touch it.
+    assert cycles[0] == (NOW, 2)                                          # user lookup + timeline
+    assert all(requests in (0, 1) for _, requests in cycles[1:])
+    scans = [when for when, requests in cycles if requests]
+    gaps = [later - earlier for earlier, later in zip(scans, scans[1:])]
+    assert gaps and all(timedelta(minutes=100) <= gap <= timedelta(minutes=125) for gap in gaps)
+    assert sum(1 for _, requests in cycles if requests == 0) >= len(orders) - 6
+    starts = [when for when, _ in cycles]
+    assert all(later - earlier >= timedelta(minutes=5) for earlier, later in zip(starts, starts[1:]))
+
+    # Two messages in all: the post was found, and its views are fully ordered.
+    texts = _telegram_texts(mocked)
+    assert len(texts) == 2
+    assert LINK in texts[0] and "Views are ordered in 10-12 parts over 12h; likes at once." in texts[0]
+    assert f"Views fully ordered: 4,000 in {len(orders)} orders — {LINK}" in texts[1]
     assert "Split view orders in progress" not in report(cfg, "2026-10-27")
-
-    run_at(14)                                                            # nothing left to place
-    assert sum(o[2] for o in placed if o[0] == "5") == 5000
+    assert main.next_wake(cfg, starts[-1]) is None                        # nothing left: the run ends
 
 
-def test_rejected_view_order_is_reported_and_retried_next_run(mocked, make_config):
-    cfg = make_config(SMM_ENABLED="true", SMM_AUTO_ORDER="true", SMM_API_URL=SMM_URL, SMM_API_KEY="smm-key",
-                      SMM_IMPRESSION_SERVICE_ID="5", VIEW_SPLIT_MIN=1, VIEW_SPLIT_MAX=1)
+def test_a_run_that_starts_late_catches_up_without_ever_placing_two_orders_together(mocked, make_config):
+    # The situation this bot was in: posts discovered, then no run for many hours.
+    cfg = make_config(IMPRESSION_TARGET=4000, **ORDERING)
     mocked.get(USER_URL, json=user_body())
-    mocked.get(TIMELINE_URL, json=timeline_body([raw_post("1866000000000000001")]))
+    mocked.get(TIMELINE_URL, json=timeline_body(TWO_POSTS))
+    placed = _fake_panel(mocked)
+    smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
+    assert main.run(cfg, now=NOW, x_client=client(), smm_client=smm) == 0
+    assert len(placed) == 2                                               # first slice of each post
+    mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
+
+    late = NOW + timedelta(hours=16)
+    code, cycles = _keep_alive(cfg, BotClock(late))
+
+    assert code == 0
+    plans = read(cfg, "campaigns.json")["plans"]
+    longest = max(len(plan["view_schedule"]["orders"]) for plan in plans.values())
+    for plan in plans.values():
+        orders = plan["view_schedule"]["orders"]
+        assert all(o["status"] == "placed" for o in orders)
+        assert sum(o["quantity"] for o in orders) == 4000
+        times = [parse_iso_datetime(o["placed_at"]) for o in orders[1:]]
+        assert times == [late + timedelta(minutes=10 * step) for step in range(len(times))]
+    assert [when for when, _ in cycles] == [late + timedelta(minutes=10 * step) for step in range(longest - 1)]
+    assert cycles[-1][0] - late <= timedelta(minutes=110)                 # the backlog is gone in under two hours
+
+
+def test_bot_keeps_scanning_for_a_day_after_the_latest_post_then_stops(mocked, make_config):
+    cfg = make_config(SCAN_INTERVAL_HOURS=2)                              # no ordering at all: scans only
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body([raw_post(POST_ID, "2026-10-26T16:30:00.000Z")]))
+
+    def after_cycle(number):
+        if number == 1:
+            mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
+        if number == 4:                                                   # a second post six hours in...
+            mocked.replace("GET", TIMELINE_URL, json=timeline_body([raw_post("1866000000000000009", "2026-10-26T22:30:00Z")]))
+        if number == 5:
+            mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
+
+    code, cycles = _keep_alive(cfg, BotClock(NOW), after_cycle=after_cycle)
+
+    assert code == 0
+    starts = [when for when, _ in cycles]
+    assert all(later - earlier == timedelta(hours=2) for earlier, later in zip(starts, starts[1:]))
+    assert len(read(cfg, "posts.json")["posts"]) == 2                     # found by an on-time scan
+    assert starts[-1] == NOW + timedelta(hours=8 + 24)                    # ...keeps the bot up a day from then
+    assert main.next_wake(cfg, starts[-1]) is None
+
+
+def test_rejected_view_order_is_reported_and_retried_after_a_pause(mocked, make_config):
+    cfg = make_config(VIEW_SPLIT_MIN=1, VIEW_SPLIT_MAX=1, **ORDERING)
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body([raw_post(POST_ID)]))
     reject = ["Not enough funds on balance"]
     placed = _fake_panel(mocked, reject)
     smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
 
     assert main.run(cfg, now=NOW, x_client=client(), smm_client=smm) == 0
-    assert placed == [] and "Not enough funds" in report(cfg) and "will retry next run" in report(cfg)
+    assert placed == [] and "Not enough funds" in report(cfg) and "trying again in 30 min" in report(cfg)
+    assert main.next_wake(cfg, NOW) == NOW + timedelta(minutes=30)        # the run stays alive for the retry
 
     reject[0] = None                                                      # balance topped up
     mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
-    assert main.run(cfg, now=NOW + timedelta(hours=1), x_client=client(), smm_client=smm) == 0
-    assert placed == [("5", "https://x.com/ExampleUser/status/1866000000000000001", 1000)]
+    assert main.run(cfg, now=NOW + timedelta(minutes=30), x_client=client(), smm_client=smm) == 0
+    assert placed == [("5", LINK, 1000)]
+    assert main.next_wake(cfg, NOW + timedelta(minutes=31)) is None
+
+
+def test_likes_failure_reaches_the_owner(mocked, make_config):
+    cfg = make_config(SMM_ENABLED="true", SMM_AUTO_ORDER="true", SMM_API_URL=SMM_URL, SMM_API_KEY="smm-key",
+                      SMM_LIKE_SERVICE_ID="7", TELEGRAM_ENABLED="true", TELEGRAM_BOT_TOKEN=TG_TOKEN,
+                      TELEGRAM_CHAT_ID="42")
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body([raw_post(POST_ID)]))
+    mocked.post(TG_URL, json={"ok": True})
+    _fake_panel(mocked, ["Not enough funds on balance"])
+    smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
+    assert main.run(cfg, now=NOW, x_client=client(), smm_client=smm) == 0
+    assert "Likes order failed" in _telegram_texts(mocked)[0] and "Not enough funds" in _telegram_texts(mocked)[0]
+
+
+def test_when_the_bot_stays_alive(mocked, make_config):
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body([raw_post(POST_ID)]))
+    _fake_panel(mocked)
+    smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
+    cfg = make_config(**ORDERING)
+    assert main.run(cfg, now=NOW, x_client=client(), smm_client=smm) == 0
+    second_due = parse_iso_datetime(read(cfg, "campaigns.json")["plans"][POST_ID]["view_schedule"]["orders"][1]["due_at"])
+    soon = NOW + timedelta(minutes=1)
+
+    assert main.next_wake(cfg, soon) == second_due                        # alive while view orders wait
+    assert main.next_wake(make_config(KEEP_ALIVE="always", **ORDERING), soon) == second_due
+    assert main.next_wake(make_config(KEEP_ALIVE="off", **ORDERING), soon) is None
+    assert main.next_wake(make_config(DRY_RUN="true", **ORDERING), soon) is None
+    # Auto-ordering switched off: the waiting orders will not be placed, so there is nothing to wait for...
+    paused = {**ORDERING, "SMM_AUTO_ORDER": "false"}
+    assert main.next_wake(make_config(**paused), soon) is None
+    # ...unless the bot is told to stay up for the regular scans as well.
+    next_scan = NOW + timedelta(hours=2)
+    assert main.next_wake(make_config(KEEP_ALIVE="always", **paused), soon) == next_scan
+    # By default it also stays up for a day after the latest post, so the next one is found on time.
+    default = {k: v for k, v in paused.items() if k != "KEEP_ALIVE_AFTER_POST_HOURS"}
+    assert main.next_wake(make_config(**default), soon) == next_scan
+    assert main.next_wake(make_config(**default), NOW + timedelta(hours=23, minutes=59)) == next_scan
+    assert main.next_wake(make_config(**default), NOW + timedelta(hours=24)) is None
+    assert main.next_wake(make_config(KEEP_ALIVE_AFTER_POST_HOURS=48, **default), NOW + timedelta(hours=24)) == next_scan
+
+
+def test_an_overdue_order_the_last_cycle_could_not_move_is_left_for_half_an_hour(mocked, make_config):
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json=timeline_body([raw_post(POST_ID)]))
+    _fake_panel(mocked)
+    smm = SMMClient(SMM_URL, "smm-key", max_retries=0, sleep=no_sleep)
+    cfg = make_config(**ORDERING)
+    assert main.run(cfg, now=NOW, x_client=client(), smm_client=smm) == 0
+    mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})
+
+    # A cycle runs while orders are overdue and places none of them (here: ordering was off for it).
+    later = NOW + timedelta(hours=5)
+    assert main.run(make_config(**{**ORDERING, "SMM_AUTO_ORDER": "false"}), now=later, x_client=client(), smm_client=smm) == 0
+    # Asked again straight away, the loop must not spin on the same overdue order.
+    assert main.next_wake(cfg, later + timedelta(seconds=5)) == later + timedelta(seconds=5) + timedelta(minutes=30)
+
+
+def test_failing_scan_is_retried_every_half_hour_and_announced_once(mocked, make_config):
+    cfg = make_config(SCAN_INTERVAL_HOURS=2, KEEP_ALIVE="always",
+                      TELEGRAM_ENABLED="true", TELEGRAM_BOT_TOKEN=TG_TOKEN, TELEGRAM_CHAT_ID="42")
+    mocked.get(USER_URL, json=user_body())
+    mocked.get(TIMELINE_URL, json={"meta": {"result_count": 0}})
+    mocked.post(TG_URL, json={"ok": True})
+    assert main.run(cfg, now=NOW, x_client=client()) == 0
+    mocked.replace("GET", TIMELINE_URL, status=503)
+
+    start = NOW + timedelta(hours=2)
+    code, cycles = _keep_alive(cfg, BotClock(start), max_minutes=130)     # runs out of time: no hand-over hook here
+
+    assert code == 1
+    assert [when for when, _ in cycles] == [start + timedelta(minutes=30 * n) for n in range(5)]
+    assert len(_telegram_texts(mocked)) == 1 and "X scan failed" in _telegram_texts(mocked)[0]
+    assert read(cfg, "state.json")["scan_failures"] == 5
+    assert read(cfg, "state.json")["last_successful_scan_at"] == "2026-10-26T17:00:00Z"
+
+    mocked.replace("GET", TIMELINE_URL, json={"meta": {"result_count": 0}})   # X is back
+    assert main.run(cfg, now=start + timedelta(hours=3), x_client=client()) == 0
+    assert read(cfg, "state.json")["scan_failures"] == 0
+    assert len(_telegram_texts(mocked)) == 1                              # recovery with nothing new is silent
 
 
 def test_turning_auto_order_off_stops_pending_view_orders(mocked, make_config):
@@ -553,6 +720,50 @@ def test_estimated_cost_only_with_configured_prices(mocked, make_config):
     priced = make_config(X_COST_PER_POST_READ_USD="0.005", DATA_DIR=str(cfg.data_dir) + "2")
     main.run(priced, now=NOW, x_client=client())
     assert "$0.0100" in report(priced)  # 2 posts read x $0.005
+
+
+def _main_env(monkeypatch, tmp_path, **extra):
+    """Environment for main.main() with the cycle itself replaced by a recorder."""
+    monkeypatch.setattr(main, "load_dotenv", lambda *a, **k: 0)   # never read a developer's real .env
+    for name in ("DRY_RUN", "FORCE_SCAN", "SCAN_SINCE", "KEEP_ALIVE", "KEEP_ALIVE_MINUTES", "ALLOW_STATE_REINIT"):
+        monkeypatch.delenv(name, raising=False)
+    env = {"X_BEARER_TOKEN": "test-bearer-token", "X_USERNAME": "someone",
+           "DATA_DIR": str(tmp_path / "data"), "REPORTS_DIR": str(tmp_path / "reports"), **extra}
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    clock = BotClock(NOW)
+    monkeypatch.setattr(main, "_now", clock.clock)
+    monkeypatch.setattr(main.time, "sleep", clock.sleep)
+    seen, handovers = [], []
+    monkeypatch.setattr(main, "run", lambda config: seen.append(config) or 0)
+    monkeypatch.setattr(main, "hooks_from_env", lambda env: Hooks(hand_over=lambda: handovers.append(1) or True))
+    return clock, seen, handovers
+
+
+def test_main_applies_manual_run_options_to_the_first_cycle_only(monkeypatch, tmp_path):
+    clock, seen, handovers = _main_env(
+        monkeypatch, tmp_path, FORCE_SCAN="true", SCAN_SINCE="2026-10-20T00:00:00Z", ALLOW_STATE_REINIT="true"
+    )
+    wakes = iter([NOW + timedelta(hours=1), NOW + timedelta(hours=2), None])
+    monkeypatch.setattr(main, "next_wake", lambda config, now: next(wakes))
+
+    assert main.main() == 0
+
+    assert [(c.force_scan, c.scan_since_override is not None, c.allow_state_reinit) for c in seen] == [
+        (True, True, True), (False, False, False), (False, False, False),
+    ]
+    assert clock.now == NOW + timedelta(hours=2) and handovers == []
+
+
+def test_dry_run_is_followed_by_a_real_run_only_if_something_is_waiting(monkeypatch, tmp_path):
+    _, seen, handovers = _main_env(monkeypatch, tmp_path, DRY_RUN="true")
+    monkeypatch.setattr(main, "next_wake", lambda config, now: None if config.dry_run else NOW + timedelta(hours=1))
+    assert main.main() == 0
+    assert len(seen) == 1 and seen[0].dry_run and handovers == [1]
+
+    monkeypatch.setattr(main, "next_wake", lambda config, now: None)
+    assert main.main() == 0
+    assert handovers == [1]
 
 
 def test_main_returns_2_on_config_error(monkeypatch):
