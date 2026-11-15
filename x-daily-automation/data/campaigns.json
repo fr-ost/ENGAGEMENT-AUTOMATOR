@@ -1505,7 +1505,7 @@
         {
           "authorized_at": "2026-11-15T14:51:57Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T17:39:49Z",
+          "last_checked_at": "2026-11-15T18:20:21Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000586,
@@ -1543,14 +1543,14 @@
         {
           "authorized_at": "2026-11-15T17:39:49Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T17:39:49Z",
+          "last_checked_at": "2026-11-15T18:20:21Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000686,
             "currency": "USD",
-            "remains": 343,
-            "start_count": null,
-            "status": "Pending"
+            "remains": 0,
+            "start_count": 4513,
+            "status": "Completed"
           },
           "provider": "bulkfollows",
           "quantity": 343,
@@ -1577,7 +1577,7 @@
         "impressions": 4000,
         "likes": 50
       },
-      "updated_at": "2026-11-15T17:39:49Z",
+      "updated_at": "2026-11-15T18:20:21Z",
       "view_schedule": {
         "created_at": "2026-11-15T06:27:08Z",
         "failures": 0,
@@ -1776,20 +1776,39 @@
         {
           "authorized_at": "2026-11-15T17:39:49Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T17:39:49Z",
+          "last_checked_at": "2026-11-15T18:20:21Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000804,
             "currency": "USD",
-            "remains": 402,
-            "start_count": null,
-            "status": "Pending"
+            "remains": 0,
+            "start_count": 559,
+            "status": "Completed"
           },
           "provider": "bulkfollows",
           "quantity": 402,
           "reference": "171823027",
           "service_id": "14808",
           "split": "5/12",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-15T18:20:21Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-15T18:20:21Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.000602,
+            "currency": "USD",
+            "remains": 301,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 301,
+          "reference": "171823766",
+          "service_id": "14808",
+          "split": "6/12",
           "type": "impressions"
         }
       ],
@@ -1810,7 +1829,7 @@
         "impressions": 4000,
         "likes": 50
       },
-      "updated_at": "2026-11-15T17:39:49Z",
+      "updated_at": "2026-11-15T18:20:21Z",
       "view_schedule": {
         "created_at": "2026-11-15T13:32:37Z",
         "failures": 0,
@@ -1857,8 +1876,11 @@
           },
           {
             "due_at": "2026-11-15T18:20:21Z",
+            "error": null,
+            "placed_at": "2026-11-15T18:20:21Z",
             "quantity": 301,
-            "status": "pending"
+            "reference": "171823766",
+            "status": "placed"
           },
           {
             "due_at": "2026-11-15T19:24:37Z",
@@ -1994,14 +2016,14 @@
         {
           "authorized_at": "2026-11-15T17:34:49Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T17:39:49Z",
+          "last_checked_at": "2026-11-15T18:20:21Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000782,
             "currency": "USD",
             "remains": 0,
-            "start_count": 0,
-            "status": "In progress"
+            "start_count": 1022,
+            "status": "Completed"
           },
           "provider": "bulkfollows",
           "quantity": 391,
@@ -2028,7 +2050,7 @@
         "impressions": 4000,
         "likes": 50
       },
-      "updated_at": "2026-11-15T17:39:49Z",
+      "updated_at": "2026-11-15T18:20:21Z",
       "view_schedule": {
         "created_at": "2026-11-15T13:32:37Z",
         "failures": 0,
