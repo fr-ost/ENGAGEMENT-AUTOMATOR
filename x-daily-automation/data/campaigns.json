@@ -651,14 +651,14 @@
         {
           "authorized_at": "2026-11-14T23:57:19Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T06:27:08Z",
+          "last_checked_at": "2026-11-15T13:32:37Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000752,
             "currency": "USD",
             "remains": 0,
-            "start_count": 0,
-            "status": "Pending"
+            "start_count": 1558,
+            "status": "Completed"
           },
           "provider": "bulkfollows",
           "quantity": 376,
@@ -689,14 +689,14 @@
         {
           "authorized_at": "2026-11-15T06:27:08Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T06:27:08Z",
+          "last_checked_at": "2026-11-15T13:32:37Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000828,
             "currency": "USD",
-            "remains": 414,
-            "start_count": null,
-            "status": "Pending"
+            "remains": 0,
+            "start_count": 1024,
+            "status": "Completed"
           },
           "provider": "bulkfollows",
           "quantity": 414,
@@ -708,13 +708,13 @@
         {
           "authorized_at": "2026-11-15T06:27:08Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T06:27:08Z",
+          "last_checked_at": "2026-11-15T13:32:37Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000578,
             "currency": "USD",
-            "remains": 289,
-            "start_count": null,
+            "remains": 0,
+            "start_count": 0,
             "status": "Pending"
           },
           "provider": "bulkfollows",
@@ -722,6 +722,25 @@
           "reference": "171810182",
           "service_id": "14808",
           "split": "5/11",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-15T13:32:37Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-15T13:32:37Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.000952,
+            "currency": "USD",
+            "remains": 476,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 476,
+          "reference": "171818695",
+          "service_id": "14808",
+          "split": "6/11",
           "type": "impressions"
         }
       ],
@@ -742,9 +761,10 @@
         "impressions": 4000,
         "likes": 50
       },
-      "updated_at": "2026-11-15T06:27:08Z",
+      "updated_at": "2026-11-15T13:32:37Z",
       "view_schedule": {
         "created_at": "2026-11-14T21:02:29Z",
+        "failures": 0,
         "orders": [
           {
             "attempts": 0,
@@ -794,8 +814,11 @@
           {
             "attempts": 0,
             "due_at": "2026-11-15T02:30:33Z",
+            "error": null,
+            "placed_at": "2026-11-15T13:32:37Z",
             "quantity": 476,
-            "status": "pending"
+            "reference": "171818695",
+            "status": "placed"
           },
           {
             "attempts": 0,
@@ -874,14 +897,14 @@
         {
           "authorized_at": "2026-11-14T23:57:19Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T06:27:08Z",
+          "last_checked_at": "2026-11-15T13:32:37Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000804,
             "currency": "USD",
             "remains": 0,
-            "start_count": 0,
-            "status": "Pending"
+            "start_count": 1056,
+            "status": "Completed"
           },
           "provider": "bulkfollows",
           "quantity": 402,
@@ -912,14 +935,14 @@
         {
           "authorized_at": "2026-11-15T06:27:08Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T06:27:08Z",
+          "last_checked_at": "2026-11-15T13:32:37Z",
           "last_error": null,
           "last_status": {
             "charge": 0.00055,
             "currency": "USD",
-            "remains": 275,
-            "start_count": null,
-            "status": "Pending"
+            "remains": 0,
+            "start_count": 746,
+            "status": "Completed"
           },
           "provider": "bulkfollows",
           "quantity": 275,
@@ -931,13 +954,13 @@
         {
           "authorized_at": "2026-11-15T06:27:08Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T06:27:08Z",
+          "last_checked_at": "2026-11-15T13:32:37Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000756,
             "currency": "USD",
-            "remains": 378,
-            "start_count": null,
+            "remains": 0,
+            "start_count": 0,
             "status": "Pending"
           },
           "provider": "bulkfollows",
@@ -945,6 +968,25 @@
           "reference": "171810184",
           "service_id": "14808",
           "split": "5/12",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-15T13:32:37Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-15T13:32:37Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.000734,
+            "currency": "USD",
+            "remains": 367,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 367,
+          "reference": "171818696",
+          "service_id": "14808",
+          "split": "6/12",
           "type": "impressions"
         }
       ],
@@ -965,9 +1007,10 @@
         "impressions": 4000,
         "likes": 50
       },
-      "updated_at": "2026-11-15T06:27:08Z",
+      "updated_at": "2026-11-15T13:32:37Z",
       "view_schedule": {
         "created_at": "2026-11-14T21:02:29Z",
+        "failures": 0,
         "orders": [
           {
             "attempts": 0,
@@ -1017,8 +1060,11 @@
           {
             "attempts": 0,
             "due_at": "2026-11-15T01:49:42Z",
+            "error": null,
+            "placed_at": "2026-11-15T13:32:37Z",
             "quantity": 367,
-            "status": "pending"
+            "reference": "171818696",
+            "status": "placed"
           },
           {
             "attempts": 0,
@@ -1066,14 +1112,14 @@
         {
           "authorized_at": "2026-11-15T06:27:08Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T06:27:08Z",
+          "last_checked_at": "2026-11-15T13:32:37Z",
           "last_error": null,
           "last_status": {
             "charge": 0.18525,
             "currency": "USD",
-            "remains": 50,
-            "start_count": null,
-            "status": "Pending"
+            "remains": 0,
+            "start_count": 2,
+            "status": "Completed"
           },
           "provider": "bulkfollows",
           "quantity": 50,
@@ -1084,20 +1130,39 @@
         {
           "authorized_at": "2026-11-15T06:27:08Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-15T06:27:08Z",
+          "last_checked_at": "2026-11-15T13:32:37Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000704,
             "currency": "USD",
-            "remains": 352,
-            "start_count": null,
-            "status": "Pending"
+            "remains": 0,
+            "start_count": 86,
+            "status": "Completed"
           },
           "provider": "bulkfollows",
           "quantity": 352,
           "reference": "171810185",
           "service_id": "14808",
           "split": "1/10",
+          "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-15T13:32:37Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-15T13:32:37Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.00081,
+            "currency": "USD",
+            "remains": 405,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 405,
+          "reference": "171818697",
+          "service_id": "14808",
+          "split": "2/10",
           "type": "impressions"
         }
       ],
@@ -1118,9 +1183,10 @@
         "impressions": 4000,
         "likes": 50
       },
-      "updated_at": "2026-11-15T06:27:08Z",
+      "updated_at": "2026-11-15T13:32:37Z",
       "view_schedule": {
         "created_at": "2026-11-15T06:27:08Z",
+        "failures": 0,
         "orders": [
           {
             "attempts": 0,
@@ -1134,8 +1200,11 @@
           {
             "attempts": 0,
             "due_at": "2026-11-15T07:57:43Z",
+            "error": null,
+            "placed_at": "2026-11-15T13:32:37Z",
             "quantity": 405,
-            "status": "pending"
+            "reference": "171818697",
+            "status": "placed"
           },
           {
             "attempts": 0,
@@ -1183,6 +1252,266 @@
             "attempts": 0,
             "due_at": "2026-11-15T17:35:23Z",
             "quantity": 343,
+            "status": "pending"
+          }
+        ],
+        "service_id": "14808",
+        "total": 4000
+      }
+    },
+    "2121883401427001716": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-11-15T13:32:37Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-15T13:32:37Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.18525,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": null,
+            "status": "Processing"
+          },
+          "provider": "bulkfollows",
+          "quantity": 50,
+          "reference": "171818693",
+          "service_id": "14318",
+          "type": "likes"
+        },
+        {
+          "authorized_at": "2026-11-15T13:32:37Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-15T13:32:37Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.000524,
+            "currency": "USD",
+            "remains": 262,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 262,
+          "reference": "171818699",
+          "service_id": "14808",
+          "split": "1/12",
+          "type": "impressions"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-11-15T13:32:37Z",
+      "errors": [],
+      "performance": {
+        "impressions": 98,
+        "likes": 2,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-15T13:32:37Z"
+      },
+      "post_id": "2121883401427001716",
+      "post_url": "https://x.com/0x_nation/status/2121883401427001716",
+      "promotion_status": "CAMPAIGN_LINKED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 4000,
+        "likes": 50
+      },
+      "updated_at": "2026-11-15T13:32:37Z",
+      "view_schedule": {
+        "created_at": "2026-11-15T13:32:37Z",
+        "failures": 0,
+        "orders": [
+          {
+            "due_at": "2026-11-15T13:32:37Z",
+            "error": null,
+            "placed_at": "2026-11-15T13:32:37Z",
+            "quantity": 262,
+            "reference": "171818699",
+            "status": "placed"
+          },
+          {
+            "due_at": "2026-11-15T14:18:29Z",
+            "quantity": 314,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T15:21:26Z",
+            "quantity": 377,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T16:28:37Z",
+            "quantity": 417,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T17:37:27Z",
+            "quantity": 402,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T18:20:21Z",
+            "quantity": 301,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T19:24:37Z",
+            "quantity": 408,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T20:25:26Z",
+            "quantity": 253,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T21:46:20Z",
+            "quantity": 351,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T22:25:03Z",
+            "quantity": 363,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T23:50:35Z",
+            "quantity": 294,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-16T00:48:00Z",
+            "quantity": 258,
+            "status": "pending"
+          }
+        ],
+        "service_id": "14808",
+        "total": 4000
+      }
+    },
+    "2121931216794599431": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-11-15T13:32:37Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-15T13:32:37Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.18525,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": null,
+            "status": "Processing"
+          },
+          "provider": "bulkfollows",
+          "quantity": 50,
+          "reference": "171818694",
+          "service_id": "14318",
+          "type": "likes"
+        },
+        {
+          "authorized_at": "2026-11-15T13:32:37Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-15T13:32:37Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.00073,
+            "currency": "USD",
+            "remains": 365,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 365,
+          "reference": "171818700",
+          "service_id": "14808",
+          "split": "1/12",
+          "type": "impressions"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-11-15T13:32:37Z",
+      "errors": [],
+      "performance": {
+        "impressions": 96,
+        "likes": 4,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-15T13:32:37Z"
+      },
+      "post_id": "2121931216794599431",
+      "post_url": "https://x.com/0x_nation/status/2121931216794599431",
+      "promotion_status": "CAMPAIGN_LINKED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 4000,
+        "likes": 50
+      },
+      "updated_at": "2026-11-15T13:32:37Z",
+      "view_schedule": {
+        "created_at": "2026-11-15T13:32:37Z",
+        "failures": 0,
+        "orders": [
+          {
+            "due_at": "2026-11-15T13:32:37Z",
+            "error": null,
+            "placed_at": "2026-11-15T13:32:37Z",
+            "quantity": 365,
+            "reference": "171818700",
+            "status": "placed"
+          },
+          {
+            "due_at": "2026-11-15T14:33:32Z",
+            "quantity": 315,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T15:44:38Z",
+            "quantity": 257,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T16:46:13Z",
+            "quantity": 285,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T17:34:48Z",
+            "quantity": 391,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T18:21:55Z",
+            "quantity": 414,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T19:47:48Z",
+            "quantity": 301,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T20:42:32Z",
+            "quantity": 446,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T21:33:11Z",
+            "quantity": 384,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T22:30:20Z",
+            "quantity": 277,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-15T23:49:08Z",
+            "quantity": 309,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-16T00:15:49Z",
+            "quantity": 256,
             "status": "pending"
           }
         ],

@@ -359,6 +359,42 @@
       },
       "status": "PLANNED",
       "text": "gm\n\nI didn't realize the people behind @strato_net had been working on Ethereum infrastructure since 2014.\n\nThat's actually a pretty interesting backstory.\n\nTheir Haskell client was one of six compatible clients when Ethereum launched. A year later, BlockApps joined Microsoft https://t.co/w4DAEmK0M4"
+    },
+    "2121883401427001716": {
+      "created_at": "2026-11-15T08:30:00.000Z",
+      "discovered_at": "2026-11-15T13:32:37Z",
+      "kind": "original",
+      "metrics_updated_at": "2026-11-15T13:32:37Z",
+      "post_id": "2121883401427001716",
+      "post_url": "https://x.com/0x_nation/status/2121883401427001716",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 98,
+        "like_count": 2,
+        "quote_count": 0,
+        "reply_count": 5,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "gm\n\nYou can hold gold or silver, but what if you could borrow against it instead of selling it?\n\nThat's one of the things STRATO is working on.\n\nUsers can borrow USDST against supported collateral, and the platform already has around $4.69M in active loans, according to https://t.co/AORqSglUDL"
+    },
+    "2121931216794599431": {
+      "created_at": "2026-11-15T11:40:00.000Z",
+      "discovered_at": "2026-11-15T13:32:37Z",
+      "kind": "original",
+      "metrics_updated_at": "2026-11-15T13:32:37Z",
+      "post_id": "2121931216794599431",
+      "post_url": "https://x.com/0x_nation/status/2121931216794599431",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 96,
+        "like_count": 4,
+        "quote_count": 0,
+        "reply_count": 8,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "gm\n\nI was checking out the $STRATO tokenomics and a couple of things stood out.\n\nThe total supply is capped at 100M, with 55.2% allocated to the community.\n\nThe token is designed for staking and validator participation, with governance and borrower benefits also included in the https://t.co/gnIOQDLrwF"
     }
   },
   "schema_version": 1
