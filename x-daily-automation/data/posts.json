@@ -341,6 +341,24 @@
       },
       "status": "PLANNED",
       "text": "I've had trading ideas that sounded great in my head, but actually turning them into a strategy was a different story.\n\nTake something as simple as buying gold when the dollar weakens, with a $200 limit per trade.\n\nYou need to turn that idea into rules, test it and figure out if https://t.co/dSUD5DeiBK https://t.co/73CdVBfb9L"
+    },
+    "2121817970305548417": {
+      "created_at": "2026-11-15T04:10:00.000Z",
+      "discovered_at": "2026-11-15T06:27:08Z",
+      "kind": "original",
+      "metrics_updated_at": "2026-11-15T06:27:08Z",
+      "post_id": "2121817970305548417",
+      "post_url": "https://x.com/0x_nation/status/2121817970305548417",
+      "public_metrics": {
+        "bookmark_count": 1,
+        "impression_count": 85,
+        "like_count": 2,
+        "quote_count": 0,
+        "reply_count": 3,
+        "retweet_count": 0
+      },
+      "status": "PLANNED",
+      "text": "gm\n\nI didn't realize the people behind @strato_net had been working on Ethereum infrastructure since 2014.\n\nThat's actually a pretty interesting backstory.\n\nTheir Haskell client was one of six compatible clients when Ethereum launched. A year later, BlockApps joined Microsoft https://t.co/w4DAEmK0M4"
     }
   },
   "schema_version": 1
