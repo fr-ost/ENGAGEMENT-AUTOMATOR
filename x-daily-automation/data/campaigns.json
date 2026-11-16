@@ -2460,6 +2460,25 @@
           "service_id": "14808",
           "split": "2/11",
           "type": "impressions"
+        },
+        {
+          "authorized_at": "2026-11-16T20:50:36Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-16T20:50:36Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.000768,
+            "currency": "USD",
+            "remains": 384,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 384,
+          "reference": "171853009",
+          "service_id": "14808",
+          "split": "3/11",
+          "type": "impressions"
         }
       ],
       "budget": null,
@@ -2481,7 +2500,7 @@
         "impressions": 4000,
         "likes": 50
       },
-      "updated_at": "2026-11-16T20:31:52Z",
+      "updated_at": "2026-11-16T20:50:36Z",
       "view_schedule": {
         "created_at": "2026-11-16T18:31:51Z",
         "failures": 0,
@@ -2504,8 +2523,11 @@
           },
           {
             "due_at": "2026-11-16T20:50:36Z",
+            "error": null,
+            "placed_at": "2026-11-16T20:50:36Z",
             "quantity": 384,
-            "status": "pending"
+            "reference": "171853009",
+            "status": "placed"
           },
           {
             "due_at": "2026-11-16T21:59:31Z",
