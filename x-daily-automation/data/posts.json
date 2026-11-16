@@ -395,6 +395,24 @@
       },
       "status": "PLANNED",
       "text": "gm\n\nI was checking out the $STRATO tokenomics and a couple of things stood out.\n\nThe total supply is capped at 100M, with 55.2% allocated to the community.\n\nThe token is designed for staking and validator participation, with governance and borrower benefits also included in the https://t.co/gnIOQDLrwF"
+    },
+    "2122383235003105691": {
+      "created_at": "2026-11-16T17:36:09.000Z",
+      "discovered_at": "2026-11-16T18:31:51Z",
+      "kind": "original",
+      "metrics_updated_at": "2026-11-16T18:31:51Z",
+      "post_id": "2122383235003105691",
+      "post_url": "https://x.com/0x_nation/status/2122383235003105691",
+      "public_metrics": {
+        "bookmark_count": 1,
+        "impression_count": 132,
+        "like_count": 23,
+        "quote_count": 0,
+        "reply_count": 27,
+        "retweet_count": 1
+      },
+      "status": "PLANNED",
+      "text": "gm everyone 👋\n\nBefore depositing into a yield product, I'd want to know three things: who controls the funds, how I can track earnings, and how withdrawals work.\n\n@grvt_io High Yield Earn covers these points:\nSelf-custody: You keep control of your private keys.\nDaily earnings: https://t.co/95JrRgrbR9"
     }
   },
   "schema_version": 1

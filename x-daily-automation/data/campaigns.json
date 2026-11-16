@@ -2420,6 +2420,115 @@
         "service_id": "14808",
         "total": 4000
       }
+    },
+    "2122383235003105691": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-11-16T18:31:51Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-16T18:31:51Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.000652,
+            "currency": "USD",
+            "remains": 326,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 326,
+          "reference": "171850902",
+          "service_id": "14808",
+          "split": "1/11",
+          "type": "impressions"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-11-16T18:31:51Z",
+      "errors": [
+        "Likes order failed (50 for post 2122383235003105691): SMM API error on 'add': Not enough funds on balance - not retried"
+      ],
+      "performance": {
+        "impressions": 132,
+        "likes": 23,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-16T18:31:51Z"
+      },
+      "post_id": "2122383235003105691",
+      "post_url": "https://x.com/0x_nation/status/2122383235003105691",
+      "promotion_status": "CAMPAIGN_LINKED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 4000,
+        "likes": 50
+      },
+      "updated_at": "2026-11-16T18:31:51Z",
+      "view_schedule": {
+        "created_at": "2026-11-16T18:31:51Z",
+        "failures": 0,
+        "orders": [
+          {
+            "due_at": "2026-11-16T18:31:51Z",
+            "error": null,
+            "placed_at": "2026-11-16T18:31:51Z",
+            "quantity": 326,
+            "reference": "171850902",
+            "status": "placed"
+          },
+          {
+            "due_at": "2026-11-16T19:56:44Z",
+            "quantity": 377,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-16T20:50:36Z",
+            "quantity": 384,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-16T21:59:31Z",
+            "quantity": 319,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-16T22:51:55Z",
+            "quantity": 366,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-16T23:57:34Z",
+            "quantity": 299,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-17T00:59:59Z",
+            "quantity": 436,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-17T02:10:22Z",
+            "quantity": 441,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-17T03:09:06Z",
+            "quantity": 379,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-17T04:02:03Z",
+            "quantity": 318,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-17T05:35:40Z",
+            "quantity": 355,
+            "status": "pending"
+          }
+        ],
+        "service_id": "14808",
+        "total": 4000
+      }
     }
   },
   "schema_version": 1
