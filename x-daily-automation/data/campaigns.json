@@ -2541,7 +2541,8 @@
       "budget": null,
       "created_at": "2026-11-16T18:31:51Z",
       "errors": [
-        "Likes order failed (50 for post 2122383235003105691): SMM API error on 'add': Not enough funds on balance - not retried"
+        "Likes order failed (50 for post 2122383235003105691): SMM API error on 'add': Not enough funds on balance - not retried",
+        "View order outcome unknown (views 7/11, 436 for post 2122383235003105691): SMM API timed out on 'add' after 1 attempts - no clear answer twice, so it is not tried again; check the panel's order list"
       ],
       "performance": {
         "impressions": 132,
@@ -2557,10 +2558,10 @@
         "impressions": 4000,
         "likes": 50
       },
-      "updated_at": "2026-11-17T01:00:00Z",
+      "updated_at": "2026-11-17T01:30:00Z",
       "view_schedule": {
         "created_at": "2026-11-16T18:31:51Z",
-        "failures": 1,
+        "failures": 2,
         "orders": [
           {
             "due_at": "2026-11-16T18:31:51Z",
@@ -2614,8 +2615,8 @@
             "due_at": "2026-11-17T00:59:59Z",
             "error": "SMM API timed out on 'add' after 1 attempts",
             "quantity": 436,
-            "status": "pending",
-            "unclear": 1
+            "status": "unknown",
+            "unclear": 2
           },
           {
             "due_at": "2026-11-17T02:10:22Z",
