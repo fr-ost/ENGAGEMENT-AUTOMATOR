@@ -2730,6 +2730,136 @@
         "service_id": "14808",
         "total": 4000
       }
+    },
+    "2122736201522368834": {
+      "authorized_campaigns": [
+        {
+          "authorized_at": "2026-11-17T18:29:05Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-17T18:29:05Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.18525,
+            "currency": "USD",
+            "remains": 50,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 50,
+          "reference": "171878011",
+          "service_id": "14318",
+          "type": "likes"
+        },
+        {
+          "authorized_at": "2026-11-17T18:29:05Z",
+          "authorized_by": "auto",
+          "last_checked_at": "2026-11-17T18:29:05Z",
+          "last_error": null,
+          "last_status": {
+            "charge": 0.000546,
+            "currency": "USD",
+            "remains": 273,
+            "start_count": null,
+            "status": "Pending"
+          },
+          "provider": "bulkfollows",
+          "quantity": 273,
+          "reference": "171878012",
+          "service_id": "14808",
+          "split": "1/12",
+          "type": "impressions"
+        }
+      ],
+      "budget": null,
+      "created_at": "2026-11-17T18:29:05Z",
+      "errors": [],
+      "performance": {
+        "impressions": 156,
+        "likes": 10,
+        "source": "x_api_public_metrics",
+        "updated_at": "2026-11-17T18:29:05Z"
+      },
+      "post_id": "2122736201522368834",
+      "post_url": "https://x.com/0x_nation/status/2122736201522368834",
+      "promotion_status": "CAMPAIGN_LINKED",
+      "status": "PLANNED",
+      "targets": {
+        "impressions": 4000,
+        "likes": 50
+      },
+      "updated_at": "2026-11-17T18:29:05Z",
+      "view_schedule": {
+        "created_at": "2026-11-17T18:29:05Z",
+        "failures": 0,
+        "orders": [
+          {
+            "due_at": "2026-11-17T18:29:05Z",
+            "error": null,
+            "placed_at": "2026-11-17T18:29:05Z",
+            "quantity": 273,
+            "reference": "171878012",
+            "status": "placed"
+          },
+          {
+            "due_at": "2026-11-17T19:37:37Z",
+            "quantity": 358,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-17T20:13:02Z",
+            "quantity": 354,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-17T21:42:59Z",
+            "quantity": 366,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-17T22:11:41Z",
+            "quantity": 264,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-17T23:24:36Z",
+            "quantity": 325,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-18T00:44:58Z",
+            "quantity": 428,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-18T01:28:41Z",
+            "quantity": 302,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-18T02:37:05Z",
+            "quantity": 315,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-18T03:23:50Z",
+            "quantity": 363,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-18T04:21:52Z",
+            "quantity": 385,
+            "status": "pending"
+          },
+          {
+            "due_at": "2026-11-18T05:37:31Z",
+            "quantity": 267,
+            "status": "pending"
+          }
+        ],
+        "service_id": "14808",
+        "total": 4000
+      }
     }
   },
   "schema_version": 1
