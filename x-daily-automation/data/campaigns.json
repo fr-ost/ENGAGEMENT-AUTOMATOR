@@ -2578,14 +2578,14 @@
         {
           "authorized_at": "2026-11-17T04:02:03Z",
           "authorized_by": "auto",
-          "last_checked_at": "2026-11-17T04:02:03Z",
+          "last_checked_at": "2026-11-17T04:29:00Z",
           "last_error": null,
           "last_status": {
             "charge": 0.000636,
             "currency": "USD",
-            "remains": 318,
-            "start_count": null,
-            "status": "Pending"
+            "remains": 0,
+            "start_count": 3052,
+            "status": "Completed"
           },
           "provider": "bulkfollows",
           "quantity": 318,
@@ -2615,7 +2615,7 @@
         "impressions": 4000,
         "likes": 50
       },
-      "updated_at": "2026-11-17T04:02:03Z",
+      "updated_at": "2026-11-17T04:29:00Z",
       "view_schedule": {
         "created_at": "2026-11-16T18:31:51Z",
         "failures": 0,
