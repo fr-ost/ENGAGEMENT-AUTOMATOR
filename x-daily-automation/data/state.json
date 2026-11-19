@@ -6,29 +6,19 @@
   "last_run": {
     "duplicates_skipped": 0,
     "errors": [],
-    "finished_at": "2026-11-19T02:33:16Z",
+    "finished_at": "2026-11-19T11:36:52Z",
     "new_posts": 0,
     "orders_placed": 0,
     "scan_status": "SUCCESS",
-    "started_at": "2026-11-19T02:33:14Z",
+    "started_at": "2026-11-19T11:36:50Z",
     "x_requests": 1
   },
-  "last_scan_attempt_at": "2026-11-19T02:33:14Z",
-  "last_scan_window_start": "2026-11-18T18:11:50Z",
+  "last_scan_attempt_at": "2026-11-19T11:36:50Z",
+  "last_scan_window_start": "2026-11-19T00:33:14Z",
   "last_seen_post_id": "2122736201522368834",
-  "last_successful_scan_at": "2026-11-19T02:33:14Z",
+  "last_successful_scan_at": "2026-11-19T11:36:50Z",
   "last_window_scan_at": "2026-11-19T02:33:14Z",
   "run_history": [
-    {
-      "duplicates_skipped": 0,
-      "errors": [],
-      "finished_at": "2026-11-16T15:24:43Z",
-      "new_posts": 0,
-      "orders_placed": 0,
-      "scan_status": "SUCCESS",
-      "started_at": "2026-11-16T15:24:42Z",
-      "x_requests": 1
-    },
     {
       "duplicates_skipped": 0,
       "errors": [
@@ -623,6 +613,16 @@
       "orders_placed": 0,
       "scan_status": "SUCCESS",
       "started_at": "2026-11-19T02:33:14Z",
+      "x_requests": 1
+    },
+    {
+      "duplicates_skipped": 0,
+      "errors": [],
+      "finished_at": "2026-11-19T11:36:52Z",
+      "new_posts": 0,
+      "orders_placed": 0,
+      "scan_status": "SUCCESS",
+      "started_at": "2026-11-19T11:36:50Z",
       "x_requests": 1
     }
   ],
